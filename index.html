@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Restackd — Live Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800;900&family=JetBrains+Mono:wght@800;900&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * Restackd Live Overlay v15
+   * Standalone HTML — no build, no framework. Edit + push.
+   * Hosted at overlay.restackd.com. Polls restackd.com data APIs.
+   *
+   * Brand:
+   *   #08090A  ink (bg)
+   *   #D1FE17  lime (accent)
+   *   Plus Jakarta Sans / JetBrains Mono
+   *
+   * Strategy:
+   *  - Header strip: logo + LIVE dot + spots-left pill
+   *  - Spotlight: ONE huge newest buyer card with lime glow
+   *  - Tail: 3 greyed past buyers slowly fading
+   *  - On new sale (SSE): spotlight slides down → tail; new buyer
+   *    materializes in the spotlight with a flip + glow
+   * ============================================================ */
+
+  :root {
+    --ink:        #08090A;
+    --lime:       #D1FE17;
+    --lime-dim:   rgba(209, 254, 23, 0.5);
+    --white:      #FFFFFF;
+    --w-90:       rgba(255, 255, 255, 0.90);
+    --w-60:       rgba(255, 255, 255, 0.60);
+    --w-40:       rgba(255, 255, 255, 0.40);
+    --w-08:       rgba(255, 255, 255, 0.08);
+  }
+
+  *,
+  *::before,
+  *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;       /* overlay sits on top of TikTok stream */
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--white);
+    overflow: hidden;
+  }
+
+  .root {
+    display: inline-block;
+    padding: 18px;
+  }
+
+  .frame {
+    display: flex;
+    flex-direction: column;
+    width: 1040px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: var(--ink);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow:
+      0 36px 80px rgba(0, 0, 0, 0.78),
+      0 0 0 1px rgba(209, 254, 23, 0.06);
+    transform: translateZ(0);
+  }
+
+  /* ============================================================
+   * HEADER — logo + LIVE + spots-left pill
+   * ============================================================ */
+  .hdr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--w-08);
+    background: linear-gradient(180deg, rgba(255,255,255,0.018) 0%, transparent 100%);
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand svg {
+    width: 40px;
+    height: 40px;
+  }
+  .wm {
+    font-size: 32px;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+    line-height: 1;
+  }
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--lime);
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 5px 9px;
+    border-radius: 6px;
+    background: rgba(209, 254, 23, 0.12);
+    border: 1px solid rgba(209, 254, 23, 0.35);
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 10px rgba(209, 254, 23, 0.8);
+    animation: pulse-dot 1.1s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(0.72); }
+  }
+
+  .spots {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 16px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(209,254,23,0.18), rgba(209,254,23,0.06));
+    border: 1.5px solid rgba(209, 254, 23, 0.45);
+    box-shadow: 0 0 28px rgba(209, 254, 23, 0.20);
+  }
+  .spots-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 48px;
+    font-weight: 900;
+    color: var(--lime);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    text-shadow: 0 0 16px rgba(209, 254, 23, 0.55);
+    font-variant-numeric: tabular-nums;
+  }
+  .spots-sub {
+    font-size: 14px;
+    font-weight: 900;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--white);
+    line-height: 1;
+  }
+
+  /* ============================================================
+   * BODY — spotlight buyer + tail
+   * ============================================================ */
+  .body {
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: radial-gradient(ellipse at top, rgba(209,254,23,0.04) 0%, transparent 60%);
+  }
+
+  /* SPOTLIGHT — newest buyer, BIG and lime */
+  .spot {
+    position: relative;
+    display: grid;
+    grid-template-columns: 96px 1fr;
+    gap: 22px;
+    padding: 22px 26px;
+    border-radius: 18px;
+    background:
+      linear-gradient(135deg, rgba(209,254,23,0.14) 0%, rgba(209,254,23,0.04) 100%);
+    border: 2px solid rgba(209, 254, 23, 0.65);
+    box-shadow:
+      0 0 36px rgba(209, 254, 23, 0.30),
+      inset 0 0 24px rgba(209, 254, 23, 0.08);
+    overflow: hidden;
+  }
+  .spot::before {
+    /* persistent shimmer sweep */
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(209,254,23,0.14) 50%, transparent 65%);
+    transform: translateX(-100%);
+    animation: shimmer 4.5s linear infinite;
+    pointer-events: none;
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+  .spot.enter {
+    animation: spot-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both,
+               spot-glow 1.8s ease-in-out 0.7s 3;
+  }
+  @keyframes spot-enter {
+    0%   { opacity: 0; transform: translateY(-32px) scale(0.94); filter: blur(8px); }
+    60%  { opacity: 1; transform: translateY(0) scale(1.02); filter: blur(0); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+  }
+  @keyframes spot-glow {
+    0%, 100% { box-shadow: 0 0 36px rgba(209,254,23,0.30), inset 0 0 24px rgba(209,254,23,0.08); }
+    50%      { box-shadow: 0 0 64px rgba(209,254,23,0.65), inset 0 0 36px rgba(209,254,23,0.20); }
+  }
+
+  .avatar {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #D1FE17, #a3c413);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    font-weight: 900;
+    line-height: 1;
+    flex-shrink: 0;
+    box-shadow:
+      0 0 32px rgba(209, 254, 23, 0.55),
+      0 0 0 4px rgba(209, 254, 23, 0.20);
+  }
+
+  .spot-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    min-width: 0;
+  }
+  .spot-name {
+    font-size: 56px;
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  }
+  .spot-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .spot-action {
+    font-size: 20px;
+    font-weight: 900;
+    color: var(--lime);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    line-height: 1;
+    text-shadow: 0 0 12px rgba(209, 254, 23, 0.55);
+  }
+  .spot-pill {
+    font-size: 18px;
+    font-weight: 900;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--lime);
+    color: var(--ink);
+    letter-spacing: -0.01em;
+    line-height: 1;
+  }
+  .spot-when {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--w-60);
+    letter-spacing: -0.01em;
+    margin-left: 4px;
+  }
+  .spot-empty {
+    grid-column: 1 / -1;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--w-40);
+    font-style: italic;
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  /* TAIL — 3 greyed past buyers */
+  .tail {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0 6px;
+  }
+  .tail-row {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 4px;
+    border-radius: 8px;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--w-60);
+    transition: opacity 0.4s ease;
+    animation: tail-slide-in 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes tail-slide-in {
+    0%   { opacity: 0; transform: translateY(-16px); }
+    100% { opacity: var(--tail-opacity, 1); transform: translateY(0); }
+  }
+  .tail-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--w-90);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 900;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .tail-name {
+    font-weight: 900;
+    color: var(--w-90);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .tail-name::after {
+    content: ' · just joined';
+    color: var(--w-40);
+    font-weight: 700;
+    font-size: 0.85em;
+  }
+  .tail-when {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--w-40);
+    letter-spacing: -0.01em;
+  }
+
+  /* progressive fade for older rows */
+  .tail-row:nth-child(1) { --tail-opacity: 0.85; opacity: 0.85; }
+  .tail-row:nth-child(2) { --tail-opacity: 0.55; opacity: 0.55; }
+  .tail-row:nth-child(3) { --tail-opacity: 0.32; opacity: 0.32; }
+  .tail-row:nth-child(n+4) { display: none; }
+
+  /* Status: connection */
+  .conn {
+    position: absolute;
+    bottom: 6px;
+    right: 14px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px;
+    color: var(--w-40);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    user-select: none;
+  }
+  .conn.live { color: rgba(209, 254, 23, 0.6); }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .spot::before, .spot.enter { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="root">
+  <div class="frame" id="frame">
+
+    <!-- HEADER -->
+    <div class="hdr">
+      <div class="brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+          <g>
+            <rect x="0"  y="0"  width="64" height="16" rx="2.5" fill="#D1FE17"/>
+            <rect x="0"  y="22" width="64" height="16" rx="2.5" fill="#F5F5F5"/>
+            <rect x="0"  y="44" width="34" height="16" rx="2.5" fill="#7A7C80"/>
+            <rect x="42" y="44" width="22" height="16" rx="2.5" fill="#7A7C80"/>
+          </g>
+        </svg>
+        <span class="wm">restackd</span>
+        <span class="live"><span class="live-dot"></span>LIVE</span>
+      </div>
+      <div class="spots">
+        <span class="spots-num" id="spotsNum">10</span>
+        <span class="spots-sub">SPOTS<br>LEFT TODAY</span>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="body">
+
+      <!-- Spotlight (newest) -->
+      <div class="spot" id="spot">
+        <div class="spot-empty" id="spotEmpty">Waiting for the next sale…</div>
+      </div>
+
+      <!-- Tail (previous buyers, greyed + fading) -->
+      <div class="tail" id="tail"></div>
+
+    </div>
+
+    <span class="conn" id="conn">connecting…</span>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ============================================================
+  // CONFIG
+  //   These are the only knobs you should ever need to touch.
+  // ============================================================
+  const API_BASE     = 'https://restackd.com';
+  const TICKER_PATH  = '/api/founding/ticker';
+  const SPOTS_PATH   = '/api/overlay/spots';
+  const SSE_PATH     = '/api/overlay/stream';
+  const POLL_MS      = 6000;
+  const TAIL_MAX     = 3;
+
+  // ============================================================
+  // DOM refs
+  // ============================================================
+  const $spot      = document.getElementById('spot');
+  const $spotEmpty = document.getElementById('spotEmpty');
+  const $tail      = document.getElementById('tail');
+  const $spotsNum  = document.getElementById('spotsNum');
+  const $conn      = document.getElementById('conn');
+
+  // ============================================================
+  // STATE
+  // ============================================================
+  let buyers     = []; // { name, when, ts } — newest at index 0
+  let lastSeenId = null;
+  let spots      = 10;
+
+  // ============================================================
+  // RENDER
+  // ============================================================
+  function cap(s) {
+    if (!s) return '';
+    return s[0].toUpperCase() + s.slice(1).toLowerCase();
+  }
+  function initial(s) {
+    return (s || '?')[0].toUpperCase();
+  }
+  function renderSpot(b, animate) {
+    if (!b) {
+      $spot.innerHTML = `<div class="spot-empty">Waiting for the next sale…</div>`;
+      $spot.classList.remove('enter');
+      return;
+    }
+    $spot.classList.remove('enter');
+    // force reflow so the animation re-fires
+    void $spot.offsetWidth;
+    $spot.innerHTML = `
+      <div class="avatar">${initial(b.name)}</div>
+      <div class="spot-text">
+        <div class="spot-name">${cap(b.name)}</div>
+        <div class="spot-meta">
+          <span class="spot-action">JUST JOINED</span>
+          <span class="spot-pill">$249 LIFETIME</span>
+          <span class="spot-when">${b.when || 'just now'}</span>
+        </div>
+      </div>
+    `;
+    if (animate) {
+      $spot.classList.add('enter');
+    }
+  }
+  function renderTail() {
+    const rest = buyers.slice(1, 1 + TAIL_MAX);
+    if (rest.length === 0) {
+      $tail.innerHTML = '';
+      return;
+    }
+    $tail.innerHTML = rest.map((b) => `
+      <div class="tail-row">
+        <div class="tail-avatar">${initial(b.name)}</div>
+        <div class="tail-name">${cap(b.name)}</div>
+        <div class="tail-when">${b.when || ''}</div>
+      </div>
+    `).join('');
+  }
+  function renderSpots() {
+    $spotsNum.textContent = String(Math.max(0, spots));
+  }
+
+  // ============================================================
+  // UPDATE — called on every new sale (poll or SSE)
+  // ============================================================
+  function applyBuyer(entry, animate) {
+    if (!entry?.name) return;
+    const id = `${entry.position ?? ''}-${entry.name}`;
+    if (id === lastSeenId) return;
+    const firstSeen = lastSeenId === null;
+    lastSeenId = id;
+
+    // Insert at top; dedupe by position if present
+    buyers = [{
+      name: entry.name,
+      when: entry.timeLabel || 'just now',
+      ts:   Date.now(),
+    }, ...buyers.filter(b => b.name !== entry.name)].slice(0, 1 + TAIL_MAX);
+
+    renderSpot(buyers[0], animate && !firstSeen);
+    renderTail();
+  }
+
+  function applySpots(remaining) {
+    if (typeof remaining !== 'number') return;
+    spots = remaining;
+    renderSpots();
+  }
+
+  // ============================================================
+  // CONNECTION — SSE preferred, poll fallback
+  // ============================================================
+  function markConn(state) {
+    $conn.textContent = state;
+    $conn.classList.toggle('live', state === 'live');
+  }
+
+  let es = null;
+  function openSSE() {
+    try {
+      es = new EventSource(`${API_BASE}${SSE_PATH}`);
+      es.addEventListener('open', () => markConn('live'));
+      es.addEventListener('message', (ev) => {
+        try {
+          const p = JSON.parse(ev.data);
+          if (p?.name && typeof p?.position === 'number') {
+            applyBuyer({ name: cap(p.name), position: p.position, timeLabel: p.timeLabel || 'just now' }, true);
+          }
+          if (typeof p?.spotsRemaining === 'number') {
+            applySpots(p.spotsRemaining);
+          }
+        } catch {}
+      });
+      es.addEventListener('error', () => {
+        markConn('reconnecting…');
+        if (es && es.readyState === EventSource.CLOSED) {
+          es.close(); es = null;
+          setTimeout(openSSE, 4000);
+        }
+      });
+    } catch {
+      markConn('poll-only');
+    }
+  }
+
+  async function poll() {
+    try {
+      const [tr, sr] = await Promise.all([
+        fetch(`${API_BASE}${TICKER_PATH}`, { cache: 'no-store', mode: 'cors' }),
+        fetch(`${API_BASE}${SPOTS_PATH}`,  { cache: 'no-store', mode: 'cors' }),
+      ]);
+      if (tr.ok) {
+        const td = await tr.json();
+        const latest = td.latestEntry;
+        if (latest) applyBuyer(latest, false);
+      }
+      if (sr.ok) {
+        const sd = await sr.json();
+        if (typeof sd.remaining === 'number') applySpots(sd.remaining);
+      }
+      if (!es) markConn('poll');
+    } catch {
+      markConn('offline');
+    }
+  }
+
+  // ============================================================
+  // BOOT
+  // ============================================================
+  renderSpots();
+  poll();
+  setInterval(poll, POLL_MS);
+  openSSE();
+})();
+</script>
+
+</body>
+</html>
