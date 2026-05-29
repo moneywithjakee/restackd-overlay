@@ -424,7 +424,10 @@
   const TICKER_PATH  = '/api/founding/ticker';
   const SPOTS_PATH   = '/api/overlay/spots';
   const SSE_PATH     = '/api/overlay/stream';
-  const POLL_MS      = 6000;
+  // POLL_MS: fall back to 3s polling when SSE flaps. SSE through
+  // Cloudflare's proxy is currently unreliable (Upstash subscriber
+  // closes after ~100s) so we lean on polling as the primary update path.
+  const POLL_MS      = 3000;
   const TAIL_MAX     = 3;
 
   // ============================================================
@@ -523,11 +526,23 @@
   }
 
   // ============================================================
-  // CONNECTION — SSE preferred, poll fallback
+  // CONNECTION — SSE preferred, poll fallback. Indicator stays
+  // invisible while healthy; only flips visible on offline state.
   // ============================================================
   function markConn(state) {
-    $conn.textContent = state;
-    $conn.classList.toggle('live', state === 'live');
+    if (state === 'live' || state === 'poll') {
+      // Healthy — hide the diagnostic blurb. The user doesn't need to
+      // know whether data is coming via SSE or poll, only when it stops.
+      $conn.textContent = '';
+      $conn.classList.remove('live', 'offline');
+    } else if (state === 'offline') {
+      $conn.textContent = '● offline';
+      $conn.classList.add('offline');
+      $conn.classList.remove('live');
+    } else {
+      $conn.textContent = '';
+      $conn.classList.remove('live', 'offline');
+    }
   }
 
   let es = null;
@@ -547,14 +562,16 @@
         } catch {}
       });
       es.addEventListener('error', () => {
-        markConn('reconnecting…');
+        // SSE flap is expected (Cloudflare proxy + Upstash). Don't surface
+        // it as "reconnecting" — the poll loop is the real update path
+        // and is already running silently behind the scenes.
         if (es && es.readyState === EventSource.CLOSED) {
           es.close(); es = null;
           setTimeout(openSSE, 4000);
         }
       });
     } catch {
-      markConn('poll-only');
+      // SSE unsupported / blocked. Poll loop handles updates.
     }
   }
 
@@ -566,8 +583,31 @@
       ]);
       if (tr.ok) {
         const td = await tr.json();
-        const latest = td.latestEntry;
-        if (latest) applyBuyer(latest, false);
+        // Use the FULL entries array — first one is newest (spotlight),
+        // remaining go to the greyed tail. Previously we only consumed
+        // latestEntry which left the tail empty even when the API
+        // returned 10 buyers.
+        const entries = Array.isArray(td.entries) ? td.entries : [];
+        if (entries.length > 0) {
+          // Seed the buyers list from the server's ordered list so the
+          // tail populates on first paint.
+          const newId = `${entries[0].position ?? ''}-${entries[0].name}`;
+          const isNewer = newId !== lastSeenId;
+          if (isNewer || buyers.length === 0) {
+            buyers = entries.slice(0, 1 + TAIL_MAX).map(e => ({
+              name: cap(e.name),
+              when: e.timeLabel || 'just now',
+              ts:   Date.now(),
+            }));
+            const firstSeen = lastSeenId === null;
+            lastSeenId = newId;
+            renderSpot(buyers[0], !firstSeen && isNewer);
+            renderTail();
+          }
+        } else if (td.latestEntry) {
+          // Fallback: API only returned a single entry.
+          applyBuyer(td.latestEntry, false);
+        }
       }
       if (sr.ok) {
         const sd = await sr.json();
