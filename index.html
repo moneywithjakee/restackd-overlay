@@ -97,28 +97,19 @@
    * LIVELINE SWEEP — 4px lime bar that sweeps the bottom edge
    * forever. Pure transform animation, no repaint.
    * ============================================================ */
+  /* STATIC liveline — solid lime bar across bottom. The previous
+     animated sweep was being mangled by the H.264 encoder on stream.
+     A static lime accent reads as "live UI" without choking encoder
+     bandwidth. */
   .liveline {
     position: absolute;
     bottom: 0;
     left: 0;
     width: 100%;
     height: 3px;
-    overflow: hidden;
     z-index: 4;
-    background: linear-gradient(90deg, transparent, rgba(209, 254, 23, 0.10), transparent);
-  }
-  .liveline::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, transparent 0%, var(--lime) 40%, var(--lime) 60%, transparent 100%);
-    transform: translateX(-100%);
-    animation: liveline-sweep 3s linear infinite;
-    will-change: transform;
-  }
-  @keyframes liveline-sweep {
-    0%   { transform: translate3d(-100%, 0, 0); }
-    100% { transform: translate3d(100%, 0, 0); }
+    background: linear-gradient(90deg, transparent, var(--lime) 30%, var(--lime) 70%, transparent);
+    opacity: 0.55;
   }
 
   /* ============================================================
@@ -167,25 +158,21 @@
     border: 1px solid rgba(209, 254, 23, 0.35);
     margin-left: 4px;
   }
-  /* LIVE dot — real heartbeat. transform scale only. */
+  /* LIVE dot — simple opacity pulse, encoder-friendly.
+     2-keyframe linear opacity is the smoothest possible motion on
+     a re-encoded stream because the encoder can predict every frame. */
   .live-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--lime);
-    /* STATIC shadow */
     box-shadow: 0 0 10px rgba(209, 254, 23, 0.8);
-    animation: heartbeat 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    will-change: transform;
-    transform-origin: center;
+    animation: dot-pulse 1.6s linear infinite;
+    will-change: opacity;
   }
-  @keyframes heartbeat {
-    0%   { transform: scale(1); }
-    14%  { transform: scale(1.32); }
-    28%  { transform: scale(1); }
-    42%  { transform: scale(1.2); }
-    70%  { transform: scale(1); }
-    100% { transform: scale(1); }
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.35; }
   }
 
   .divider {
@@ -202,21 +189,14 @@
     gap: 18px;
     position: relative;
   }
-  /* Flame — pure transform-only flicker. */
+  /* Flame — STATIC. Continuous sub-pixel motion was being mangled by
+     TikTok's H.264 encoder. The static 🔥 emoji is just as visually
+     loud and reads clean on a re-encoded stream. */
   .spots-flame {
     font-size: 56px;
     line-height: 1;
     display: inline-block;
-    animation: flame-flicker 0.9s linear infinite;
     transform-origin: center bottom;
-    will-change: transform;
-  }
-  @keyframes flame-flicker {
-    0%   { transform: translate3d(0, 0, 0) scale(1) rotate(-2deg); }
-    25%  { transform: translate3d(0.5px, -1px, 0) scale(1.04) rotate(2deg); }
-    50%  { transform: translate3d(-0.5px, -2px, 0) scale(1.07) rotate(-1deg); }
-    75%  { transform: translate3d(0.3px, -1px, 0) scale(1.03) rotate(3deg); }
-    100% { transform: translate3d(0, 0, 0) scale(1) rotate(-2deg); }
   }
 
   /* Spots number container — holds two digits that roll on change */
@@ -233,13 +213,11 @@
     color: var(--lime);
     line-height: 1;
     letter-spacing: -0.06em;
-    /* STATIC text-shadow */
-    text-shadow:
-      0 0 24px rgba(209, 254, 23, 0.55),
-      0 0 60px rgba(209, 254, 23, 0.25);
+    /* Single STATIC text-shadow. The previous 60px blur layer was
+     blowing the encoder's bandwidth budget when paired with the
+     pulsing urgent state. One 16px glow is enough. */
+    text-shadow: 0 0 16px rgba(209, 254, 23, 0.50);
     font-variant-numeric: tabular-nums;
-    will-change: transform;
-    transform: translateZ(0);
   }
   /* Odometer roll on change — pure transform */
   .spots-num.roll {
@@ -250,18 +228,12 @@
     40%  { opacity: 1; }
     100% { transform: translate3d(0, 0, 0); opacity: 1; }
   }
-  /* Urgent — color and pulse via transform */
+  /* Urgent — STATIC red color, no continuous pulse.
+     The pulsing 112px text-shadow was the biggest single perf hit on
+     stream. Red color alone reads "urgent" without needing animation. */
   .spots.urgent .spots-num {
     color: var(--hot);
-    text-shadow:
-      0 0 26px rgba(255, 59, 59, 0.6),
-      0 0 70px rgba(255, 59, 59, 0.25);
-    animation: spots-urgent-pulse 0.9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    transform-origin: center;
-  }
-  @keyframes spots-urgent-pulse {
-    0%, 100% { transform: scale(1); }
-    50%      { transform: scale(1.08); }
+    text-shadow: 0 0 18px rgba(255, 59, 59, 0.55);
   }
   .spots-meta {
     display: flex;
@@ -328,56 +300,23 @@
     background:
       linear-gradient(135deg, rgba(209,254,23,0.14) 0%, rgba(209,254,23,0.04) 100%);
     border: 2px solid rgba(209, 254, 23, 0.65);
-    /* STATIC shadow — outer glow div handles the pulse */
-    box-shadow: 0 0 36px rgba(209, 254, 23, 0.30);
+    /* STATIC shadow — no animated shadows on stream output. */
+    box-shadow:
+      0 0 36px rgba(209, 254, 23, 0.30),
+      0 0 0 1px rgba(209, 254, 23, 0.40) inset;
     overflow: hidden;
     align-items: center;
     transform: translateZ(0);
-    will-change: transform;
-    /* Subtle breath so the card never feels static */
-    animation: spot-breath 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   }
-  @keyframes spot-breath {
-    0%, 100% { transform: translateZ(0) scale(1); }
-    50%      { transform: translateZ(0) scale(1.012); }
-  }
-  /* Outer glow halo — opacity-only, no box-shadow animation */
-  .spot::after {
-    content: '';
-    position: absolute;
-    inset: -8px;
-    border-radius: 20px;
-    background: radial-gradient(ellipse at center, rgba(209, 254, 23, 0.40), transparent 60%);
-    opacity: 0.45;
-    pointer-events: none;
-    z-index: -1;
-    animation: spot-halo-breath 3.6s ease-in-out infinite;
-    will-change: opacity;
-  }
-  @keyframes spot-halo-breath {
-    0%, 100% { opacity: 0.35; }
-    50%      { opacity: 0.65; }
-  }
-  /* Shimmer — pure transform */
-  .spot::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(105deg, transparent 35%, rgba(209,254,23,0.18) 50%, transparent 65%);
-    transform: translate3d(-100%, 0, 0);
-    animation: shimmer 4s linear infinite;
-    pointer-events: none;
-    will-change: transform;
-  }
-  @keyframes shimmer {
-    0%   { transform: translate3d(-100%, 0, 0); }
-    100% { transform: translate3d(100%, 0, 0); }
-  }
+  /* Removed: spot-breath, spot-halo-breath, shimmer.
+     These continuous looping animations were the primary lag source on
+     TikTok Live's H.264 re-encode pipeline. The card now sits still
+     between sales — only the EVENT triggers (spot-enter on new sale,
+     confetti burst, money rain) drive motion, which encodes cleanly. */
 
   /* Spotlight entry — transform + opacity ONLY. No blur. */
   .spot.enter {
-    animation: spot-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both,
-               spot-breath 3.6s cubic-bezier(0.4, 0, 0.2, 1) 0.7s infinite;
+    animation: spot-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
   @keyframes spot-enter {
     0%   { opacity: 0; transform: translate3d(0, -28px, 0) scale(0.92); }
@@ -488,6 +427,7 @@
     align-items: center;
     gap: 6px;
   }
+  /* Tail dot — STATIC. The heartbeat had to go for stream encoding. */
   .tail-hdr::before {
     content: '';
     width: 6px;
@@ -495,9 +435,6 @@
     border-radius: 50%;
     background: var(--lime);
     box-shadow: 0 0 8px rgba(209, 254, 23, 0.7);
-    animation: heartbeat 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    transform-origin: center;
-    will-change: transform;
   }
   .tail-row {
     display: flex;
