@@ -23,7 +23,7 @@
    *   │  SEATS LEFT    │
    *   │  3 sold today  │
    *   ├────────────────┤
-   *   │ $249 LIFETIME  │  price card
+   *   │ DWA 3.0 + RESTACKD  │  price card
    *   │ TAP @bio       │  cta
    *   ├────────────────┤
    *   │ 🟢 DARIO  #75  │  newest buyer (lime on new)
@@ -191,6 +191,12 @@
   .price-row { display: flex; align-items: baseline; justify-content: center; gap: 9px; }
   .price-amt { font-size: 52px; font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
   .price-term { font-size: 17px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+  /* strikethrough "was" price + the RESTACKD label on the free frame */
+  .price-was {
+    font-size: 26px; font-weight: 800; letter-spacing: -0.03em; line-height: 1;
+    opacity: 0.5; text-decoration: line-through; text-decoration-thickness: 3px;
+  }
+  .price-term2 { font-size: 30px; font-weight: 900; letter-spacing: -0.02em; line-height: 1; }
   .price-cta {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 14px; font-weight: 800; letter-spacing: 0.03em;
@@ -454,7 +460,7 @@
         <div class="to-eyebrow">NEW MEMBER · JUST JOINED</div>
         <div class="to-name" id="toName">Dario</div>
         <div class="to-thanks">WELCOME TO RESTACKD</div>
-        <div class="to-pill" id="toPill">$249 LIFETIME</div>
+        <div class="to-pill" id="toPill">DWA 3.0 + RESTACKD</div>
         <div class="to-sub">Thank you for joining the movement</div>
       </div>
     </div>
@@ -479,13 +485,23 @@
     </div>
 
     <div class="price" id="price">
+      <!-- Frame 1: the bundle price -->
       <div class="price-frame show" id="priceFrame1">
         <div class="price-row">
-          <span class="price-amt">$249</span>
-          <span class="price-term">Lifetime · once</span>
+          <span class="price-amt">$497</span>
+          <span class="price-was">$797</span>
         </div>
-        <div class="price-cta">TAP @startwithjake BIO →</div>
+        <div class="price-cta">DWA 3.0 + RESTACKD · TAP BIO →</div>
       </div>
+      <!-- Frame 2: Restackd included free -->
+      <div class="price-frame" id="priceFrame3">
+        <div class="price-row">
+          <span class="price-term2">RESTACKD</span>
+          <span class="price-amt">FREE</span>
+        </div>
+        <div class="price-cta">$249 VALUE · INCLUDED IN THE BUNDLE</div>
+      </div>
+      <!-- Frame 3: $0 down BNPL -->
       <div class="price-frame" id="priceFrame2">
         <div class="bnpl-top">
           <span class="bnpl-amt">$0</span>
@@ -521,7 +537,8 @@
   const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti'), $moneyRain=document.getElementById('moneyRain');
   const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
   const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
-  const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
+  // Display order: bundle price → Restackd free → $0 down BNPL
+  const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame3'), document.getElementById('priceFrame2')];
   const $takeover=document.getElementById('takeover'), $toFx=document.getElementById('takeoverFx');
   const $toName=document.getElementById('toName'), $toPill=document.getElementById('toPill');
 
@@ -598,7 +615,7 @@
     if(!b || !$takeover) return;
     clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
     $toName.textContent = cap(b.name);
-    $toPill.textContent = '$249 LIFETIME';            // no founder number — founders are closed
+    $toPill.textContent = 'DWA 3.0 + RESTACKD';            // no founder number — founders are closed
     // restart entry animation
     $takeover.classList.remove('out','show'); void $takeover.offsetWidth;
     $takeover.setAttribute('aria-hidden','false');
@@ -630,7 +647,7 @@
   const PRICE_ROTATE_MS = 4500;
   let priceIdx = 0;
   function rotatePrice(){
-    priceIdx = priceIdx === 0 ? 1 : 0;
+    priceIdx = (priceIdx + 1) % $priceFrames.length;   // cycle through all frames
     $priceFrames.forEach((el, i) => el && el.classList.toggle('show', i === priceIdx));
   }
 
@@ -644,7 +661,7 @@
       <div class="buyer-av">${initial(b.name)}</div>
       <div class="buyer-txt">
         <div class="buyer-name">${cap(b.name)}</div>
-        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">$249 LIFETIME</span></div>
+        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">DWA 3.0 + RESTACKD</span></div>
       </div>`;
     if(animate) $buyer.classList.add('enter');
   }
