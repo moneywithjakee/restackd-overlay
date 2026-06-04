@@ -44,14 +44,29 @@ git push                     # Vercel auto-deploys in ~30 sec
 
 ## Design
 
-- Lime `#D1FE17` + ink `#08090A`
-- Plus Jakarta Sans + JetBrains Mono
-- Header: logo + LIVE + spots-left pill
-- Spotlight: newest buyer card with lime glow + shimmer
-- Tail: 3 greyed previous buyers, progressively faded
+- **Vertical 9:16 side-rail** — pins top-left of the TikTok portrait frame, clear of
+  the comment stream (bottom-left) and the like/share/gift rail (right).
+- Lime `#D1FE17` + ink `#08090A`, Plus Jakarta Sans + JetBrains Mono, real R-stack logo
+- Brand width `384px`; OBS browser source ~`420 × 980` (the rail + its padding).
+- Anatomy top→bottom: logo · LIVE → big **SEATS LEFT** number → **rotating price card**
+  → newest-buyer card (glows lime on a sale) → recent tail (3, progressively faded).
+- **Rotating price card** crossfades every 4.5s between:
+  1. `$249 · Lifetime · once · TAP @startwithjake BIO`
+  2. `$0 down today · 4 interest-free payments · Klarna / Afterpay`
+  (BNPL frame reflects the Stan Store checkout, which offers Klarna + Afterpay pay-in-4.)
+- Urgent state (≤5 seats): seats number turns red.
+- Motion is GPU-only (transform + opacity), static shadows, no continuous loops on hot
+  paths — encodes cleanly through TikTok Live's H.264 re-encode.
 
-## v15 changelog
+## OBS setup (vertical)
 
-- Stripped everything except: logo, newest buyer (BIG), spots-left, 3 greyed past buyers
-- Removed: rotating scenes, hooks, CTA ribbon, split-pay chips, competitor savings
-- Hosted separately from restackd.com so iterations are instant
+- Browser Source · URL `https://overlay.restackd.com/`
+- Width `420`, Height `980` (or scale to taste — the rail is `384px` wide + padding)
+- Position: top-left of the canvas. Transparent background is already set.
+
+## changelog
+
+- **v16 (vertical):** rebuilt the horizontal v15 banner back into a vertical side-rail
+  (the original concept). Added the rotating price ↔ $0-down BNPL card. Variants B
+  (Glass Ticket) + C (Receipt Feed) preserved in the repo as alternates.
+- v15: horizontal banner — logo, newest buyer, spots-left, greyed tail.

@@ -161,16 +161,32 @@
   .seats-sold.bump { animation: bump 0.6s cubic-bezier(0.16,1,0.3,1); }
   @keyframes bump { 0%{transform:scale(1);} 30%{transform:scale(1.22);} 100%{transform:scale(1);} }
 
-  /* ---------- PRICE CARD ---------- */
+  /* ---------- PRICE CARD (rotates: price  <->  $0-down BNPL) ---------- */
   .price {
+    position: relative;
     margin: 0 18px 14px;
     padding: 13px 16px;
     border-radius: 16px;
     background: var(--lime);
     color: var(--ink);
-    display: flex; flex-direction: column; gap: 2px;
     box-shadow: 0 0 28px rgba(209,254,23,0.28);
+    overflow: hidden;
+    /* fixed height so the two crossfading frames don't reflow the rail */
+    height: 78px;
   }
+  /* Each rotating frame is absolutely stacked; only one is visible at a time */
+  .price-frame {
+    position: absolute;
+    inset: 13px 16px;
+    display: flex; flex-direction: column;
+    justify-content: center; gap: 2px;
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1);
+    will-change: opacity, transform;
+    pointer-events: none;
+  }
+  .price-frame.show { opacity: 1; transform: translate3d(0, 0, 0); }
   .price-row { display: flex; align-items: baseline; gap: 8px; }
   .price-amt { font-size: 38px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
   .price-term { font-size: 14px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
@@ -180,6 +196,16 @@
     text-transform: uppercase;
     margin-top: 4px;
     opacity: 0.82;
+  }
+  /* BNPL frame — "$0 DOWN" is the loud line, providers underneath */
+  .bnpl-top { display: flex; align-items: baseline; gap: 8px; }
+  .bnpl-amt { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .bnpl-lead { font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
+  .bnpl-sub {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; letter-spacing: 0;
+    text-transform: uppercase; margin-top: 5px; opacity: 0.84;
+    white-space: nowrap;
   }
 
   /* ---------- NEWEST BUYER ---------- */
@@ -269,9 +295,10 @@
     line-height: 1; flex: 1;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .tail-row:nth-child(2){--o:0.9;opacity:0.9;}
-  .tail-row:nth-child(3){--o:0.62;opacity:0.62;}
-  .tail-row:nth-child(4){--o:0.38;opacity:0.38;}
+  /* header is child 1; first recent buyer (child 2) stays brightest, then fade */
+  .tail-row:nth-child(2){--o:1;opacity:1;}
+  .tail-row:nth-child(3){--o:0.7;opacity:0.7;}
+  .tail-row:nth-child(4){--o:0.45;opacity:0.45;}
   .tail-row:nth-child(n+5){display:none;}
 
   .money-rain span {
@@ -327,12 +354,21 @@
       <span class="seats-sold zero" id="seatsSold">0 SOLD TODAY</span>
     </div>
 
-    <div class="price">
-      <div class="price-row">
-        <span class="price-amt">$249</span>
-        <span class="price-term">Lifetime · once</span>
+    <div class="price" id="price">
+      <div class="price-frame show" id="priceFrame1">
+        <div class="price-row">
+          <span class="price-amt">$249</span>
+          <span class="price-term">Lifetime · once</span>
+        </div>
+        <div class="price-cta">TAP @startwithjake BIO →</div>
       </div>
-      <div class="price-cta">TAP @startwithjake BIO →</div>
+      <div class="price-frame" id="priceFrame2">
+        <div class="bnpl-top">
+          <span class="bnpl-amt">$0</span>
+          <span class="bnpl-lead">down today</span>
+        </div>
+        <div class="bnpl-sub">4 INTEREST-FREE PAYMENTS · KLARNA / AFTERPAY</div>
+      </div>
     </div>
 
     <div class="buyer" id="buyer">
@@ -354,8 +390,18 @@
   const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti'), $moneyRain=document.getElementById('moneyRain');
   const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
   const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
+  const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
 
   let buyers=[], lastSeenId=null, spots=10, prevSpots=10, soldToday=0, prevSold=0;
+
+  // Price card rotation: $249 Lifetime  <->  $0 down / 4 interest-free (Klarna·Afterpay).
+  // Crossfade every PRICE_ROTATE_MS. Honors prefers-reduced-motion (stays on frame 1).
+  const PRICE_ROTATE_MS = 4500;
+  let priceIdx = 0;
+  function rotatePrice(){
+    priceIdx = priceIdx === 0 ? 1 : 0;
+    $priceFrames.forEach((el, i) => el && el.classList.toggle('show', i === priceIdx));
+  }
 
   const cap=s=>!s?'':s[0].toUpperCase()+s.slice(1).toLowerCase();
   const initial=s=>(s||'?')[0].toUpperCase();
@@ -446,6 +492,10 @@
   resizeConfetti();
   window.addEventListener('resize',resizeConfetti,{passive:true});
   renderSeats(false); renderSold(false); poll(); setInterval(poll,POLL_MS); openSSE();
+  // Start price rotation unless the viewer prefers reduced motion.
+  if(!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    setInterval(rotatePrice, PRICE_ROTATE_MS);
+  }
 })();
 </script>
 </body>
