@@ -723,6 +723,25 @@
   if(!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     setInterval(rotatePrice, PRICE_ROTATE_MS);
   }
+
+  // ---- DEMO / DRY-RUN ----------------------------------------------------
+  // Open ?demo=1 to fire ONE test celebration ~1.5s after load (preview in
+  // OBS before going live). Optional name: ?demo=Jake. Optional loop for a
+  // continuous reel: ?demo=1&loop=1 re-fires ~8s after each one ends.
+  // Demo mode never touches real data — it only triggers the takeover visual.
+  try {
+    const qp = new URLSearchParams(location.search);
+    if (qp.has('demo')) {
+      const raw = qp.get('demo');
+      const demoName = (raw && raw !== '1' && raw !== 'true') ? raw : 'Mariana';
+      const demoLoop = qp.has('loop');
+      const runDemo = () => fireTakeover({ name: demoName, position: 77 });
+      setTimeout(function tick(){
+        runDemo();
+        if (demoLoop) setTimeout(tick, TAKEOVER_MS + 8000); // hold + 8s gap, then again
+      }, 1500);
+    }
+  } catch {}
 })();
 </script>
 </body>
