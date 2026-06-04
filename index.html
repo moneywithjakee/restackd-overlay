@@ -386,30 +386,12 @@
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 18px; font-weight: 800; letter-spacing: 0.22em;
     text-transform: uppercase; color: var(--lime);
+    margin-bottom: 26px;
     opacity: 0; animation: to-pop 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s forwards;
   }
-  .to-avatar {
-    width: 132px; height: 132px; border-radius: 50%;
-    margin: 22px 0 18px;
-    background: linear-gradient(135deg, #D1FE17, #a3c413);
-    color: var(--ink);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 64px; font-weight: 900; line-height: 1;
-    box-shadow: 0 0 46px rgba(209,254,23,0.6), 0 0 0 6px rgba(209,254,23,0.22);
-    opacity: 0;
-    animation: av-slam 0.7s cubic-bezier(0.16,1,0.3,1) 0.25s forwards,
-               av-breathe 2.4s ease-in-out 1s infinite;
-    will-change: transform;
-  }
-  @keyframes av-slam {
-    0%{opacity:0;transform:scale(0.2) rotate(-160deg);}
-    70%{opacity:1;transform:scale(1.12) rotate(8deg);}
-    100%{opacity:1;transform:scale(1) rotate(0);}
-  }
-  @keyframes av-breathe { 0%,100%{box-shadow:0 0 46px rgba(209,254,23,0.6),0 0 0 6px rgba(209,254,23,0.22);} 50%{box-shadow:0 0 64px rgba(209,254,23,0.85),0 0 0 9px rgba(209,254,23,0.3);} }
 
   .to-name {
-    font-size: 76px; font-weight: 900; color: var(--bone);
+    font-size: 88px; font-weight: 900; color: var(--bone);
     line-height: 0.95; letter-spacing: -0.04em;
     max-width: 100%; word-break: break-word;
     text-shadow: 0 0 30px rgba(209,254,23,0.35);
@@ -453,7 +435,7 @@
   @keyframes to-pop { 0%{opacity:0;transform:translate3d(0,12px,0);} 100%{opacity:1;transform:translate3d(0,0,0);} }
 
   @media (prefers-reduced-motion: reduce) {
-    .to-rays, .to-avatar { animation: none !important; }
+    .to-rays { animation: none !important; }
     .to-pill::after { animation: none !important; }
   }
 </style>
@@ -470,10 +452,9 @@
       <div class="to-rays"></div>
       <div class="to-inner">
         <div class="to-eyebrow">NEW MEMBER · JUST JOINED</div>
-        <div class="to-avatar" id="toAvatar">D</div>
         <div class="to-name" id="toName">Dario</div>
         <div class="to-thanks">WELCOME TO RESTACKD</div>
-        <div class="to-pill" id="toPill">$249 LIFETIME · FOUNDER #75</div>
+        <div class="to-pill" id="toPill">$249 LIFETIME</div>
         <div class="to-sub">Thank you for joining the movement</div>
       </div>
     </div>
@@ -542,7 +523,7 @@
   const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
   const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
   const $takeover=document.getElementById('takeover'), $toFx=document.getElementById('takeoverFx');
-  const $toName=document.getElementById('toName'), $toAvatar=document.getElementById('toAvatar'), $toPill=document.getElementById('toPill');
+  const $toName=document.getElementById('toName'), $toPill=document.getElementById('toPill');
 
   let buyers=[], lastSeenId=null, spots=10, prevSpots=10, soldToday=0, prevSold=0;
 
@@ -554,6 +535,9 @@
   let takeoverTimer = 0, toRaf = 0, toBurstTimer = 0, toActive = false;
   const toParts = [];
   let toCtx = null, toW = 0, toH = 0;
+  // Queue of buyers waiting for their celebration. If several sales land at
+  // once, each one still gets its FULL hold — they play back-to-back.
+  const toQueue = [];
 
   function sizeToFx(){
     if(!$toFx) return;
@@ -592,22 +576,29 @@
     }
     toRaf = (toParts.length>0 || toActive) ? requestAnimationFrame(toTick) : 0;
   }
+  // End the current celebration, then immediately play the next queued one
+  // (if any) so multiple simultaneous buyers run back-to-back.
   function endTakeover(){
     if(!toActive) return;
     toActive = false;
     clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
     $takeover.classList.remove('show');
     $takeover.classList.add('out');
-    setTimeout(()=>{ $takeover.classList.remove('out'); $takeover.setAttribute('aria-hidden','true'); }, 650);
+    setTimeout(()=>{
+      $takeover.classList.remove('out');
+      if(toQueue.length > 0){
+        playTakeover(toQueue.shift());                // next buyer, back-to-back
+      } else {
+        $takeover.setAttribute('aria-hidden','true'); // queue drained → back to rail
+      }
+    }, 650);
   }
-  // Fire the full-overlay celebration for buyer b. Restarts cleanly if a
-  // second sale lands while one is already showing (newest buyer wins).
-  function fireTakeover(b){
+  // Play ONE celebration for buyer b (the actual visual). Drained from toQueue.
+  function playTakeover(b){
     if(!b || !$takeover) return;
     clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
     $toName.textContent = cap(b.name);
-    $toAvatar.textContent = initial(b.name);
-    $toPill.textContent = b.position ? `$249 LIFETIME · FOUNDER #${b.position}` : '$249 LIFETIME';
+    $toPill.textContent = '$249 LIFETIME';            // no founder number — founders are closed
     // restart entry animation
     $takeover.classList.remove('out','show'); void $takeover.offsetWidth;
     $takeover.setAttribute('aria-hidden','false');
@@ -619,6 +610,19 @@
       toBurstTimer = setInterval(()=>toBurst(14), 900); // sustained rain through the hold
     }
     takeoverTimer = setTimeout(endTakeover, TAKEOVER_MS);
+  }
+  // Enqueue a buyer's celebration. If nothing is playing, start immediately;
+  // otherwise it waits its turn and plays when the current one finishes.
+  // De-dupes so the same buyer can't be queued twice.
+  function fireTakeover(b){
+    if(!b || !b.name || !$takeover) return;
+    const key = `${b.position ?? ''}-${b.name}`;
+    if(toActive){
+      const curKey = `${$toName.textContent}`.toLowerCase();
+      if(curKey === cap(b.name).toLowerCase()) return;   // already celebrating them
+    }
+    if(toQueue.some(q => `${q.position ?? ''}-${q.name}` === key)) return; // already queued
+    if(toActive){ toQueue.push(b); } else { playTakeover(b); }
   }
 
   // Price card rotation: $249 Lifetime  <->  $0 down / 4 interest-free (Klarna·Afterpay).
@@ -636,12 +640,11 @@
   function renderBuyer(b, animate){
     if(!b){ $buyer.innerHTML=`<div class="buyer-empty">Waiting for the next sale…</div>`; $buyer.classList.remove('enter'); return; }
     $buyer.classList.remove('enter'); void $buyer.offsetWidth;
-    const pos = b.position ? `<span class="buyer-pos">#${b.position}</span>` : '';
     $buyer.innerHTML=`
       <div class="buyer-av">${initial(b.name)}</div>
       <div class="buyer-txt">
         <div class="buyer-name">${cap(b.name)}</div>
-        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span>${pos}</div>
+        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">$249 LIFETIME</span></div>
       </div>`;
     if(animate) $buyer.classList.add('enter');
   }
