@@ -146,15 +146,15 @@
   }
   .seats.urgent .seats-num { color: var(--hot); text-shadow: 0 0 24px rgba(255,59,59,0.5); }
   .seats-label {
-    font-size: 18px; font-weight: 800; letter-spacing: 0.13em;
+    font-size: 22px; font-weight: 900; letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--bone); line-height: 1;
-    margin-top: 4px;
+    margin-top: 6px;
   }
   .seats-sold {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 13px; font-weight: 700; color: var(--lime);
-    letter-spacing: 0.05em; text-transform: uppercase;
-    margin-top: 9px; opacity: 0.9;
+    font-size: 16px; font-weight: 800; color: var(--lime);
+    letter-spacing: 0.04em; text-transform: uppercase;
+    margin-top: 10px; opacity: 0.95;
     transition: opacity 0.3s ease;
   }
   .seats-sold.zero { opacity: 0.38; }
@@ -172,14 +172,15 @@
     box-shadow: 0 0 28px rgba(209,254,23,0.28);
     overflow: hidden;
     /* fixed height so the two crossfading frames don't reflow the rail */
-    height: 78px;
+    height: 96px;
   }
   /* Each rotating frame is absolutely stacked; only one is visible at a time */
   .price-frame {
     position: absolute;
-    inset: 13px 16px;
+    inset: 12px 16px;
     display: flex; flex-direction: column;
-    justify-content: center; gap: 2px;
+    justify-content: center; align-items: center; gap: 3px;
+    text-align: center;
     opacity: 0;
     transform: translate3d(0, 8px, 0);
     transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1);
@@ -187,26 +188,29 @@
     pointer-events: none;
   }
   .price-frame.show { opacity: 1; transform: translate3d(0, 0, 0); }
-  .price-row { display: flex; align-items: baseline; gap: 8px; }
-  .price-amt { font-size: 38px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-  .price-term { font-size: 14px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+  .price-row { display: flex; align-items: baseline; justify-content: center; gap: 9px; }
+  .price-amt { font-size: 52px; font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+  .price-term { font-size: 17px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
   .price-cta {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    font-size: 14px; font-weight: 800; letter-spacing: 0.03em;
     text-transform: uppercase;
-    margin-top: 4px;
-    opacity: 0.82;
+    margin-top: 5px;
   }
-  /* BNPL frame — "$0 DOWN" is the loud line, providers underneath */
-  .bnpl-top { display: flex; align-items: baseline; gap: 8px; }
-  .bnpl-amt { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-  .bnpl-lead { font-size: 14px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; }
-  .bnpl-sub {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 11px; font-weight: 700; letter-spacing: 0;
-    text-transform: uppercase; margin-top: 5px; opacity: 0.84;
-    white-space: nowrap;
+  /* BNPL frame — "$0 DOWN" is the loud centered line, provider logos underneath */
+  .bnpl-top { display: flex; align-items: baseline; justify-content: center; gap: 9px; }
+  .bnpl-amt { font-size: 48px; font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+  .bnpl-lead { font-size: 17px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; }
+  .bnpl-logos {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 7px;
   }
+  .bnpl-chip {
+    display: inline-flex; align-items: center;
+    background: var(--ink); border-radius: 7px;
+    padding: 5px 11px; line-height: 1;
+  }
+  .bnpl-chip svg { display: block; height: 15px; width: auto; }
 
   /* ---------- NEWEST BUYER ---------- */
   .buyer {
@@ -240,18 +244,18 @@
   @keyframes av-spin { 0%{transform:rotate(-180deg) scale(0.6);} 100%{transform:rotate(0) scale(1);} }
   .buyer-txt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
   .buyer-name {
-    font-size: 27px; font-weight: 800; color: var(--bone);
+    font-size: 31px; font-weight: 900; color: var(--bone);
     line-height: 1; letter-spacing: -0.02em;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .buyer-meta { display: flex; align-items: center; gap: 8px; }
+  .buyer-meta { display: flex; align-items: center; gap: 9px; }
   .buyer-tag {
-    font-size: 12px; font-weight: 800; color: var(--lime);
-    letter-spacing: 0.08em; text-transform: uppercase; line-height: 1;
+    font-size: 14px; font-weight: 900; color: var(--lime);
+    letter-spacing: 0.07em; text-transform: uppercase; line-height: 1;
   }
   .buyer-pos {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 12px; font-weight: 700; color: var(--w-60);
+    font-size: 14px; font-weight: 800; color: var(--w-60);
     line-height: 1;
   }
   .buyer-empty {
@@ -268,9 +272,9 @@
   }
   .tail-hdr {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 10px; font-weight: 700; color: var(--w-60);
-    letter-spacing: 0.18em; text-transform: uppercase;
-    margin-bottom: 10px;
+    font-size: 12px; font-weight: 800; color: var(--w-60);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    margin-bottom: 11px;
     display: flex; align-items: center; gap: 7px;
   }
   .tail-hdr::before {
@@ -285,13 +289,13 @@
   }
   @keyframes tail-in { 0%{opacity:0;transform:translate3d(0,8px,0);} 100%{opacity:var(--o,1);transform:translate3d(0,0,0);} }
   .tail-av {
-    width: 30px; height: 30px; border-radius: 50%;
+    width: 34px; height: 34px; border-radius: 50%;
     background: var(--w-08); color: var(--w-90);
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 800; line-height: 1; flex-shrink: 0;
+    font-size: 15px; font-weight: 900; line-height: 1; flex-shrink: 0;
   }
   .tail-name {
-    font-size: 17px; font-weight: 700; color: var(--w-90);
+    font-size: 20px; font-weight: 800; color: var(--w-90);
     line-height: 1; flex: 1;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
@@ -327,6 +331,131 @@
     .live-dot, .seats-num.roll, .seats-sold.bump, .buyer.enter,
     .buyer.enter .buyer-av, .tail-row { animation: none !important; }
   }
+
+  /* ============================================================
+   * PURCHASE TAKEOVER — full-overlay celebration (~60s)
+   * Fires ONLY on a real new sale. Heavy motion graphics:
+   * radiating rays, slam-in name, popping avatar, shimmer pill,
+   * sustained confetti on its own canvas. Auto-dismisses.
+   * ============================================================ */
+  .takeover {
+    position: absolute; inset: 0; z-index: 30;
+    display: flex; align-items: center; justify-content: center;
+    /* solid ink base so NOTHING from the rail bleeds through, with a lime glow on top */
+    background: var(--ink);
+    opacity: 0; visibility: hidden;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .takeover::before {
+    content: ''; position: absolute; inset: 0; z-index: 0;
+    background: radial-gradient(ellipse at center, rgba(209,254,23,0.20) 0%, rgba(8,9,10,0.4) 60%, transparent 100%);
+  }
+  .takeover.show {
+    visibility: visible;
+    animation: to-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+  .takeover.out {
+    animation: to-out 0.6s cubic-bezier(0.4,0,1,1) forwards;
+  }
+  @keyframes to-in  { 0%{opacity:0;} 100%{opacity:1;} }
+  @keyframes to-out { 0%{opacity:1;} 100%{opacity:0;visibility:hidden;} }
+
+  .takeover-fx { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+
+  /* Radiating lime rays that slowly spin behind the content */
+  .to-rays {
+    position: absolute; top: 50%; left: 50%;
+    width: 180%; aspect-ratio: 1; z-index: 0;
+    transform: translate(-50%,-50%);
+    background: repeating-conic-gradient(from 0deg,
+      rgba(209,254,23,0.10) 0deg 7deg, transparent 7deg 22deg);
+    animation: rays-spin 16s linear infinite;
+    will-change: transform;
+  }
+  .takeover.show .to-rays { opacity: 1; }
+  @keyframes rays-spin { 0%{transform:translate(-50%,-50%) rotate(0);} 100%{transform:translate(-50%,-50%) rotate(360deg);} }
+
+  .to-inner {
+    position: relative; z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; padding: 0 26px;
+    width: 100%;
+  }
+  .to-eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 18px; font-weight: 800; letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--lime);
+    opacity: 0; animation: to-pop 0.6s cubic-bezier(0.16,1,0.3,1) 0.15s forwards;
+  }
+  .to-avatar {
+    width: 132px; height: 132px; border-radius: 50%;
+    margin: 22px 0 18px;
+    background: linear-gradient(135deg, #D1FE17, #a3c413);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 64px; font-weight: 900; line-height: 1;
+    box-shadow: 0 0 46px rgba(209,254,23,0.6), 0 0 0 6px rgba(209,254,23,0.22);
+    opacity: 0;
+    animation: av-slam 0.7s cubic-bezier(0.16,1,0.3,1) 0.25s forwards,
+               av-breathe 2.4s ease-in-out 1s infinite;
+    will-change: transform;
+  }
+  @keyframes av-slam {
+    0%{opacity:0;transform:scale(0.2) rotate(-160deg);}
+    70%{opacity:1;transform:scale(1.12) rotate(8deg);}
+    100%{opacity:1;transform:scale(1) rotate(0);}
+  }
+  @keyframes av-breathe { 0%,100%{box-shadow:0 0 46px rgba(209,254,23,0.6),0 0 0 6px rgba(209,254,23,0.22);} 50%{box-shadow:0 0 64px rgba(209,254,23,0.85),0 0 0 9px rgba(209,254,23,0.3);} }
+
+  .to-name {
+    font-size: 76px; font-weight: 900; color: var(--bone);
+    line-height: 0.95; letter-spacing: -0.04em;
+    max-width: 100%; word-break: break-word;
+    text-shadow: 0 0 30px rgba(209,254,23,0.35);
+    opacity: 0;
+    animation: name-slam 0.75s cubic-bezier(0.16,1,0.3,1) 0.4s forwards;
+    will-change: transform, opacity;
+  }
+  @keyframes name-slam {
+    0%{opacity:0;transform:translate3d(0,30px,0) scale(0.7);}
+    60%{opacity:1;transform:translate3d(0,0,0) scale(1.06);}
+    100%{opacity:1;transform:translate3d(0,0,0) scale(1);}
+  }
+  .to-thanks {
+    font-size: 26px; font-weight: 900; color: var(--lime);
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-top: 14px; line-height: 1;
+    opacity: 0; animation: to-pop 0.6s cubic-bezier(0.16,1,0.3,1) 0.7s forwards;
+  }
+  .to-pill {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 17px; font-weight: 800; letter-spacing: 0.04em;
+    color: var(--ink); background: var(--lime);
+    padding: 10px 18px; border-radius: 999px;
+    margin-top: 20px; line-height: 1;
+    position: relative; overflow: hidden;
+    opacity: 0; animation: to-pop 0.6s cubic-bezier(0.16,1,0.3,1) 0.9s forwards;
+  }
+  /* shimmer sweep across the pill, looping */
+  .to-pill::after {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.55) 50%, transparent 70%);
+    transform: translateX(-120%);
+    animation: pill-shimmer 2.6s ease-in-out 1.4s infinite;
+  }
+  @keyframes pill-shimmer { 0%{transform:translateX(-120%);} 60%,100%{transform:translateX(120%);} }
+  .to-sub {
+    font-size: 19px; font-weight: 700; color: var(--w-90);
+    margin-top: 18px; line-height: 1.3; letter-spacing: -0.01em;
+    opacity: 0; animation: to-pop 0.6s cubic-bezier(0.16,1,0.3,1) 1.1s forwards;
+  }
+  @keyframes to-pop { 0%{opacity:0;transform:translate3d(0,12px,0);} 100%{opacity:1;transform:translate3d(0,0,0);} }
+
+  @media (prefers-reduced-motion: reduce) {
+    .to-rays, .to-avatar { animation: none !important; }
+    .to-pill::after { animation: none !important; }
+  }
 </style>
 </head>
 <body>
@@ -334,6 +463,20 @@
   <div class="rail" id="frame">
     <canvas class="confetti" id="confetti"></canvas>
     <div class="money-rain" id="moneyRain"></div>
+
+    <!-- ============ PURCHASE TAKEOVER (full-overlay, ~60s) ============ -->
+    <div class="takeover" id="takeover" aria-hidden="true">
+      <canvas class="takeover-fx" id="takeoverFx"></canvas>
+      <div class="to-rays"></div>
+      <div class="to-inner">
+        <div class="to-eyebrow">NEW MEMBER · JUST JOINED</div>
+        <div class="to-avatar" id="toAvatar">D</div>
+        <div class="to-name" id="toName">Dario</div>
+        <div class="to-thanks">WELCOME TO RESTACKD</div>
+        <div class="to-pill" id="toPill">$249 LIFETIME · FOUNDER #75</div>
+        <div class="to-sub">Thank you for joining the movement</div>
+      </div>
+    </div>
 
     <div class="brand">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="Restackd">
@@ -367,7 +510,14 @@
           <span class="bnpl-amt">$0</span>
           <span class="bnpl-lead">down today</span>
         </div>
-        <div class="bnpl-sub">4 INTEREST-FREE PAYMENTS · KLARNA / AFTERPAY</div>
+        <div class="bnpl-logos">
+          <span class="bnpl-chip" aria-label="Klarna">
+            <svg viewBox="0 0 80 22" xmlns="http://www.w3.org/2000/svg"><text x="0" y="17" font-family="Plus Jakarta Sans,sans-serif" font-size="19" font-weight="800" letter-spacing="-0.5" fill="#FFB3C7">Klarna.</text></svg>
+          </span>
+          <span class="bnpl-chip" aria-label="Afterpay">
+            <svg viewBox="0 0 96 22" xmlns="http://www.w3.org/2000/svg"><text x="0" y="17" font-family="Plus Jakarta Sans,sans-serif" font-size="18" font-weight="800" letter-spacing="-0.5" fill="#FFFFFF">after</text><text x="44" y="17" font-family="Plus Jakarta Sans,sans-serif" font-size="18" font-weight="800" letter-spacing="-0.5" fill="#B2FCE4">pay</text></svg>
+          </span>
+        </div>
       </div>
     </div>
 
@@ -391,8 +541,85 @@
   const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
   const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
   const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
+  const $takeover=document.getElementById('takeover'), $toFx=document.getElementById('takeoverFx');
+  const $toName=document.getElementById('toName'), $toAvatar=document.getElementById('toAvatar'), $toPill=document.getElementById('toPill');
 
   let buyers=[], lastSeenId=null, spots=10, prevSpots=10, soldToday=0, prevSold=0;
+
+  // ============================================================
+  // PURCHASE TAKEOVER — full-overlay 60s celebration on a real sale
+  // ============================================================
+  const TAKEOVER_MS = 60000;          // hold the celebration ~60s
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let takeoverTimer = 0, toRaf = 0, toBurstTimer = 0, toActive = false;
+  const toParts = [];
+  let toCtx = null, toW = 0, toH = 0;
+
+  function sizeToFx(){
+    if(!$toFx) return;
+    toW = $frame.clientWidth; toH = $frame.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    $toFx.width = toW*dpr; $toFx.height = toH*dpr;
+    $toFx.style.width = toW+'px'; $toFx.style.height = toH+'px';
+    toCtx = $toFx.getContext('2d');
+    toCtx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function toBurst(n){
+    const colors=['#D1FE17','#a3c413','#F5F5F5','#FFB3C7','#B2FCE4'];
+    for(let i=0;i<n;i++){
+      const fromLeft = Math.random()<0.5;
+      toParts.push({
+        x: fromLeft ? -10 : toW+10,
+        y: toH*0.2 + Math.random()*toH*0.4,
+        vx: (fromLeft? 1:-1)*(4+Math.random()*7),
+        vy: -(4+Math.random()*7),
+        rot: Math.random()*6.28, vr:(Math.random()-0.5)*0.5,
+        size: 6+Math.random()*8, color: colors[(Math.random()*colors.length)|0], life: 1,
+      });
+    }
+    if(!toRaf) toRaf = requestAnimationFrame(toTick);
+  }
+  function toTick(){
+    if(!toCtx){ toRaf=0; return; }
+    toCtx.clearRect(0,0,toW,toH);
+    const g=0.32, d=0.99;
+    for(let i=toParts.length-1;i>=0;i--){
+      const p=toParts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.006;
+      if(p.life<=0||p.y>toH+30){ toParts.splice(i,1); continue; }
+      toCtx.save(); toCtx.translate(p.x,p.y); toCtx.rotate(p.rot);
+      toCtx.globalAlpha=Math.max(0,Math.min(1,p.life)); toCtx.fillStyle=p.color;
+      toCtx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4); toCtx.restore();
+    }
+    toRaf = (toParts.length>0 || toActive) ? requestAnimationFrame(toTick) : 0;
+  }
+  function endTakeover(){
+    if(!toActive) return;
+    toActive = false;
+    clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
+    $takeover.classList.remove('show');
+    $takeover.classList.add('out');
+    setTimeout(()=>{ $takeover.classList.remove('out'); $takeover.setAttribute('aria-hidden','true'); }, 650);
+  }
+  // Fire the full-overlay celebration for buyer b. Restarts cleanly if a
+  // second sale lands while one is already showing (newest buyer wins).
+  function fireTakeover(b){
+    if(!b || !$takeover) return;
+    clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
+    $toName.textContent = cap(b.name);
+    $toAvatar.textContent = initial(b.name);
+    $toPill.textContent = b.position ? `$249 LIFETIME · FOUNDER #${b.position}` : '$249 LIFETIME';
+    // restart entry animation
+    $takeover.classList.remove('out','show'); void $takeover.offsetWidth;
+    $takeover.setAttribute('aria-hidden','false');
+    $takeover.classList.add('show');
+    toActive = true;
+    if(!reduceMotion){
+      sizeToFx();
+      toBurst(70);                                   // opening blast
+      toBurstTimer = setInterval(()=>toBurst(14), 900); // sustained rain through the hold
+    }
+    takeoverTimer = setTimeout(endTakeover, TAKEOVER_MS);
+  }
 
   // Price card rotation: $249 Lifetime  <->  $0 down / 4 interest-free (Klarna·Afterpay).
   // Crossfade every PRICE_ROTATE_MS. Honors prefers-reduced-motion (stays on frame 1).
@@ -459,7 +686,7 @@
     if(!entry?.name) return; const id=`${entry.position??''}-${entry.name}`; if(id===lastSeenId) return;
     const first=lastSeenId===null; lastSeenId=id;
     buyers=[{name:entry.name,position:entry.position},...buyers.filter(b=>b.name!==entry.name)].slice(0,1+TAIL_MAX);
-    const go=animate&&!first; renderBuyer(buyers[0],go); renderTail(); if(go) burst();
+    const go=animate&&!first; renderBuyer(buyers[0],go); renderTail(); if(go){ burst(); fireTakeover(buyers[0]); }
   }
   function applySpots(r){ if(typeof r!=='number'||r===spots) return; prevSpots=spots; spots=r; renderSeats(prevSpots!==spots); }
   function applySold(n){ if(typeof n!=='number'||n===soldToday) return; prevSold=soldToday; soldToday=n; renderSold(true);
@@ -482,7 +709,7 @@
       if(tr.ok){ healthy=true; const td=await tr.json(); const entries=Array.isArray(td.entries)?td.entries:[];
         if(entries.length>0){ const newId=`${entries[0].position??''}-${entries[0].name}`; const isNew=newId!==lastSeenId;
           if(isNew||buyers.length===0){ buyers=entries.slice(0,1+TAIL_MAX).map(e=>({name:cap(e.name),position:e.position}));
-            const first=lastSeenId===null; lastSeenId=newId; renderBuyer(buyers[0],!first&&isNew); renderTail(); if(!first&&isNew) burst(); } }
+            const first=lastSeenId===null; lastSeenId=newId; renderBuyer(buyers[0],!first&&isNew); renderTail(); if(!first&&isNew){ burst(); fireTakeover(buyers[0]); } } }
         else if(td.latestEntry) applyBuyer(td.latestEntry,false); }
       if(sr.ok){ healthy=true; const sd=await sr.json(); if(typeof sd.remaining==='number') applySpots(sd.remaining); if(typeof sd.soldToday==='number') applySold(sd.soldToday); }
       if(healthy) markConn('ok');
