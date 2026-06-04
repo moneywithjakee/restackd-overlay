@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Restackd — Live Overlay · Variant A (Hype Stack)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * Restackd Live Overlay — VARIANT A · "HYPE STACK"
+   * Direction: Hype-Energy (Robinhood / Cash App).
+   * Vertical 9:16 side-rail. Big lime SEATS number hero, price
+   * card, live buyer card that flashes lime on a sale, recent tail.
+   * Closest to Jake's original vertical concept, modernized to $249.
+   *
+   * Layout (vertical, pinned top-left of TikTok portrait frame):
+   *   ┌────────────────┐
+   *   │ ▦ restackd ●LIVE│  brand
+   *   ├────────────────┤
+   *   │       7        │  BIG seats number
+   *   │  SEATS LEFT    │
+   *   │  3 sold today  │
+   *   ├────────────────┤
+   *   │ $249 LIFETIME  │  price card
+   *   │ TAP @bio       │  cta
+   *   ├────────────────┤
+   *   │ 🟢 DARIO  #75  │  newest buyer (lime on new)
+   *   │ JUST JOINED    │
+   *   ├────────────────┤
+   *   │ • Owen         │  recent tail (faded)
+   *   │ • Carldelll    │
+   *   │ • Smoke        │
+   *   └────────────────┘
+   *
+   * PERF: GPU-only (transform + opacity). Static shadows. No
+   * continuous loops on hot paths — only event triggers animate,
+   * which encodes cleanly through TikTok's H.264 re-encode.
+   * ============================================================ */
+
+  :root {
+    --ink:        #08090A;
+    --ink-2:      #0F1012;
+    --ink-3:      #13141A;
+    --line:       #1C1D20;
+    --lime:       #D1FE17;
+    --bone:       #F5F5F5;
+    --hot:        #FF3B3B;
+    --w-90:       rgba(245, 245, 245, 0.90);
+    --w-60:       rgba(245, 245, 245, 0.55);
+    --w-40:       rgba(245, 245, 245, 0.38);
+    --w-08:       rgba(255, 255, 255, 0.07);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    color: var(--bone);
+    overflow: hidden;
+  }
+
+  .root { display: inline-block; padding: 22px; }
+
+  /* The vertical rail */
+  .rail {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 384px;
+    border-radius: 26px;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink) 70%);
+    border: 1px solid var(--w-08);
+    box-shadow: 0 40px 90px rgba(0,0,0,0.80);
+    transform: translateZ(0);
+    will-change: transform;
+  }
+
+  /* top lime accent edge */
+  .rail::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--lime) 25%, var(--lime) 75%, transparent);
+    opacity: 0.7;
+    z-index: 6;
+  }
+
+  .confetti {
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 7;
+    transform: translateZ(0); will-change: transform;
+  }
+  .money-rain { position: absolute; inset: 0; pointer-events: none; z-index: 8; overflow: hidden; }
+
+  /* ---------- BRAND ---------- */
+  .brand {
+    display: flex; align-items: center; gap: 11px;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid var(--w-08);
+  }
+  .brand svg { width: 34px; height: 34px; flex-shrink: 0; }
+  .wm { font-size: 24px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .live {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-left: auto;
+    font-size: 11px; font-weight: 800; color: var(--lime);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 5px 9px; border-radius: 6px;
+    background: rgba(209,254,23,0.12);
+    border: 1px solid rgba(209,254,23,0.30);
+  }
+  .live-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 9px rgba(209,254,23,0.8);
+    animation: dot-pulse 1.6s linear infinite;
+    will-change: opacity;
+  }
+  @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* ---------- SEATS HERO ---------- */
+  .seats {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 18px 22px 20px;
+    text-align: center;
+  }
+  .seats-num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 150px; font-weight: 800; color: var(--lime);
+    line-height: 0.92; letter-spacing: -0.06em;
+    text-shadow: 0 0 22px rgba(209,254,23,0.45);
+    font-variant-numeric: tabular-nums;
+  }
+  .seats-num.roll { animation: odometer 0.5s cubic-bezier(0.16,1,0.3,1); }
+  @keyframes odometer {
+    0%{transform:translate3d(0,-55%,0);opacity:0;} 40%{opacity:1;} 100%{transform:translate3d(0,0,0);opacity:1;}
+  }
+  .seats.urgent .seats-num { color: var(--hot); text-shadow: 0 0 24px rgba(255,59,59,0.5); }
+  .seats-label {
+    font-size: 18px; font-weight: 800; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--bone); line-height: 1;
+    margin-top: 4px;
+  }
+  .seats-sold {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px; font-weight: 700; color: var(--lime);
+    letter-spacing: 0.05em; text-transform: uppercase;
+    margin-top: 9px; opacity: 0.9;
+    transition: opacity 0.3s ease;
+  }
+  .seats-sold.zero { opacity: 0.38; }
+  .seats-sold.bump { animation: bump 0.6s cubic-bezier(0.16,1,0.3,1); }
+  @keyframes bump { 0%{transform:scale(1);} 30%{transform:scale(1.22);} 100%{transform:scale(1);} }
+
+  /* ---------- PRICE CARD ---------- */
+  .price {
+    margin: 0 18px 14px;
+    padding: 13px 16px;
+    border-radius: 16px;
+    background: var(--lime);
+    color: var(--ink);
+    display: flex; flex-direction: column; gap: 2px;
+    box-shadow: 0 0 28px rgba(209,254,23,0.28);
+  }
+  .price-row { display: flex; align-items: baseline; gap: 8px; }
+  .price-amt { font-size: 38px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .price-term { font-size: 14px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+  .price-cta {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-top: 4px;
+    opacity: 0.82;
+  }
+
+  /* ---------- NEWEST BUYER ---------- */
+  .buyer {
+    position: relative;
+    margin: 0 18px 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(209,254,23,0.12), rgba(209,254,23,0.03));
+    border: 1.5px solid rgba(209,254,23,0.55);
+    display: grid; grid-template-columns: 52px 1fr; gap: 13px;
+    align-items: center;
+    box-shadow: 0 0 26px rgba(209,254,23,0.22), inset 0 0 0 1px rgba(209,254,23,0.18);
+    overflow: hidden;
+  }
+  .buyer.enter { animation: buyer-enter 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+  @keyframes buyer-enter {
+    0%{opacity:0;transform:translate3d(0,-22px,0) scale(0.94);}
+    60%{opacity:1;transform:translate3d(0,0,0) scale(1.03);}
+    100%{opacity:1;transform:translate3d(0,0,0) scale(1);}
+  }
+  .buyer-av {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: linear-gradient(135deg, #D1FE17, #a3c413);
+    color: var(--ink);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; line-height: 1;
+    box-shadow: 0 0 18px rgba(209,254,23,0.4), 0 0 0 3px rgba(209,254,23,0.18);
+    flex-shrink: 0;
+  }
+  .buyer.enter .buyer-av { animation: av-spin 0.9s cubic-bezier(0.16,1,0.3,1) 0.1s; }
+  @keyframes av-spin { 0%{transform:rotate(-180deg) scale(0.6);} 100%{transform:rotate(0) scale(1);} }
+  .buyer-txt { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .buyer-name {
+    font-size: 27px; font-weight: 800; color: var(--bone);
+    line-height: 1; letter-spacing: -0.02em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .buyer-meta { display: flex; align-items: center; gap: 8px; }
+  .buyer-tag {
+    font-size: 12px; font-weight: 800; color: var(--lime);
+    letter-spacing: 0.08em; text-transform: uppercase; line-height: 1;
+  }
+  .buyer-pos {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px; font-weight: 700; color: var(--w-60);
+    line-height: 1;
+  }
+  .buyer-empty {
+    grid-column: 1 / -1;
+    font-size: 16px; font-weight: 700; color: var(--w-40);
+    text-align: center; padding: 8px 0; font-style: italic;
+  }
+
+  /* ---------- RECENT TAIL ---------- */
+  .tail {
+    margin: 0 18px 18px;
+    padding: 12px 16px 6px;
+    border-top: 1px solid var(--w-08);
+  }
+  .tail-hdr {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; font-weight: 700; color: var(--w-60);
+    letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .tail-hdr::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%;
+    background: var(--lime); box-shadow: 0 0 7px rgba(209,254,23,0.7);
+  }
+  .tail-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 9px;
+    animation: tail-in 0.55s cubic-bezier(0.16,1,0.3,1) both;
+    will-change: transform, opacity;
+  }
+  @keyframes tail-in { 0%{opacity:0;transform:translate3d(0,8px,0);} 100%{opacity:var(--o,1);transform:translate3d(0,0,0);} }
+  .tail-av {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--w-08); color: var(--w-90);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 800; line-height: 1; flex-shrink: 0;
+  }
+  .tail-name {
+    font-size: 17px; font-weight: 700; color: var(--w-90);
+    line-height: 1; flex: 1;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .tail-row:nth-child(2){--o:0.9;opacity:0.9;}
+  .tail-row:nth-child(3){--o:0.62;opacity:0.62;}
+  .tail-row:nth-child(4){--o:0.38;opacity:0.38;}
+  .tail-row:nth-child(n+5){display:none;}
+
+  .money-rain span {
+    position: absolute; top: -40px; font-size: 30px;
+    color: var(--lime); opacity: 0;
+    will-change: transform, opacity;
+    animation: money-fall 2.4s cubic-bezier(0.4,0,0.2,1) both;
+    text-shadow: 0 0 12px rgba(209,254,23,0.6);
+  }
+  @keyframes money-fall {
+    0%{opacity:0;transform:translate3d(0,-40px,0) rotate(-12deg);}
+    15%{opacity:0.9;}
+    100%{opacity:0;transform:translate3d(0,900px,0) rotate(28deg);}
+  }
+
+  .conn {
+    position: absolute; bottom: 9px; right: 13px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px; color: var(--w-40);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    user-select: none; z-index: 10;
+  }
+  .conn.offline { color: var(--hot); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .seats-num.roll, .seats-sold.bump, .buyer.enter,
+    .buyer.enter .buyer-av, .tail-row { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="rail" id="frame">
+    <canvas class="confetti" id="confetti"></canvas>
+    <div class="money-rain" id="moneyRain"></div>
+
+    <div class="brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="Restackd">
+        <g transform="translate(0,2)">
+          <rect x="0"  y="0"  width="64" height="16" rx="2.5" fill="#D1FE17"/>
+          <rect x="0"  y="22" width="64" height="16" rx="2.5" fill="#F5F5F5"/>
+          <rect x="0"  y="44" width="34" height="16" rx="2.5" fill="#7A7C80"/>
+          <rect x="42" y="44" width="22" height="16" rx="2.5" fill="#7A7C80"/>
+        </g>
+      </svg>
+      <span class="wm">restackd</span>
+      <span class="live"><span class="live-dot"></span>LIVE</span>
+    </div>
+
+    <div class="seats" id="seats">
+      <span class="seats-num" id="seatsNum">10</span>
+      <span class="seats-label">SEATS LEFT</span>
+      <span class="seats-sold zero" id="seatsSold">0 SOLD TODAY</span>
+    </div>
+
+    <div class="price">
+      <div class="price-row">
+        <span class="price-amt">$249</span>
+        <span class="price-term">Lifetime · once</span>
+      </div>
+      <div class="price-cta">TAP @startwithjake BIO →</div>
+    </div>
+
+    <div class="buyer" id="buyer">
+      <div class="buyer-empty" id="buyerEmpty">Waiting for the next sale…</div>
+    </div>
+
+    <div class="tail" id="tail">
+      <div class="tail-hdr">JUST JOINED</div>
+    </div>
+
+    <span class="conn" id="conn"></span>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_BASE='https://restackd.com', TICKER='/api/founding/ticker', SPOTS='/api/overlay/spots', SSE='/api/overlay/stream';
+  const POLL_MS=3000, TAIL_MAX=3, URGENT_AT=5;
+  const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti'), $moneyRain=document.getElementById('moneyRain');
+  const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
+  const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
+
+  let buyers=[], lastSeenId=null, spots=10, prevSpots=10, soldToday=0, prevSold=0;
+
+  const cap=s=>!s?'':s[0].toUpperCase()+s.slice(1).toLowerCase();
+  const initial=s=>(s||'?')[0].toUpperCase();
+
+  function renderBuyer(b, animate){
+    if(!b){ $buyer.innerHTML=`<div class="buyer-empty">Waiting for the next sale…</div>`; $buyer.classList.remove('enter'); return; }
+    $buyer.classList.remove('enter'); void $buyer.offsetWidth;
+    const pos = b.position ? `<span class="buyer-pos">#${b.position}</span>` : '';
+    $buyer.innerHTML=`
+      <div class="buyer-av">${initial(b.name)}</div>
+      <div class="buyer-txt">
+        <div class="buyer-name">${cap(b.name)}</div>
+        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span>${pos}</div>
+      </div>`;
+    if(animate) $buyer.classList.add('enter');
+  }
+  function renderTail(){
+    const rest=buyers.slice(1,1+TAIL_MAX);
+    $tail.innerHTML=`<div class="tail-hdr">JUST JOINED</div>`+rest.map(b=>`
+      <div class="tail-row"><div class="tail-av">${initial(b.name)}</div><div class="tail-name">${cap(b.name)}</div></div>`).join('');
+  }
+  function renderSeats(animate){
+    const v=String(Math.max(0,spots));
+    if($seatsNum.textContent!==v){ $seatsNum.textContent=v; if(animate){ $seatsNum.classList.remove('roll'); void $seatsNum.offsetWidth; $seatsNum.classList.add('roll'); } }
+    $seats.classList.toggle('urgent', spots<=URGENT_AT);
+  }
+  function renderSold(animate){
+    const n=Math.max(0,soldToday), t=`${n} SOLD TODAY`;
+    if($seatsSold.textContent!==t){ $seatsSold.textContent=t; $seatsSold.classList.toggle('zero',n===0);
+      if(animate&&n>0){ $seatsSold.classList.remove('bump'); void $seatsSold.offsetWidth; $seatsSold.classList.add('bump'); } }
+  }
+
+  // confetti
+  const ctx=$confetti.getContext('2d'); let cw=0,ch=0;
+  function resizeConfetti(){ cw=$frame.clientWidth; ch=$frame.clientHeight; const dpr=Math.min(window.devicePixelRatio||1,2);
+    $confetti.width=cw*dpr; $confetti.height=ch*dpr; $confetti.style.width=cw+'px'; $confetti.style.height=ch+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  const parts=[];
+  function burst(){ if(cw===0) resizeConfetti(); const colors=['#D1FE17','#a3c413','#F5F5F5']; const ox=cw/2, oy=ch*0.28;
+    for(let i=0;i<30;i++){ const a=Math.random()*Math.PI*2, sp=6+Math.random()*10;
+      parts.push({x:ox+(Math.random()*40-20),y:oy+(Math.random()*30-15),vx:Math.cos(a)*sp*0.7,vy:Math.sin(a)*sp*0.7-6,rot:Math.random()*6.28,vr:(Math.random()-0.5)*0.4,size:5+Math.random()*7,color:colors[(Math.random()*colors.length)|0],life:1}); }
+    if(!raf) raf=requestAnimationFrame(tick); }
+  let raf=0;
+  function tick(){ ctx.clearRect(0,0,cw,ch); const g=0.45,d=0.985;
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.012;
+      if(p.life<=0||p.y>ch+20){ parts.splice(i,1); continue; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=Math.max(0,Math.min(1,p.life)); ctx.fillStyle=p.color; ctx.fillRect(-p.size/2,-p.size*0.18,p.size,p.size*0.36); ctx.restore(); }
+    raf = parts.length>0 ? requestAnimationFrame(tick) : 0; }
+
+  function spawnMoney(n){ const sym=['$','$','$','💵','💰'];
+    for(let i=0;i<n;i++){ const el=document.createElement('span'); el.textContent=sym[(Math.random()*sym.length)|0];
+      el.style.left=(10+Math.random()*(cw-50))+'px'; el.style.animationDelay=(Math.random()*0.4)+'s'; el.style.fontSize=(22+Math.random()*14)+'px'; el.style.animationDuration=(1.8+Math.random()*1.2)+'s';
+      $moneyRain.appendChild(el); setTimeout(()=>el.remove(),3500); } }
+
+  function applyBuyer(entry, animate){
+    if(!entry?.name) return; const id=`${entry.position??''}-${entry.name}`; if(id===lastSeenId) return;
+    const first=lastSeenId===null; lastSeenId=id;
+    buyers=[{name:entry.name,position:entry.position},...buyers.filter(b=>b.name!==entry.name)].slice(0,1+TAIL_MAX);
+    const go=animate&&!first; renderBuyer(buyers[0],go); renderTail(); if(go) burst();
+  }
+  function applySpots(r){ if(typeof r!=='number'||r===spots) return; prevSpots=spots; spots=r; renderSeats(prevSpots!==spots); }
+  function applySold(n){ if(typeof n!=='number'||n===soldToday) return; prevSold=soldToday; soldToday=n; renderSold(true);
+    if(n>prevSold&&prevSold!==0) spawnMoney(8); else if(n>prevSold) spawnMoney(5); }
+
+  function markConn(s){ if(s==='offline'){ $conn.textContent='● offline'; $conn.classList.add('offline'); } else { $conn.textContent=''; $conn.classList.remove('offline'); } }
+
+  let es=null;
+  function openSSE(){ try{ es=new EventSource(`${API_BASE}${SSE}`);
+    es.addEventListener('message',ev=>{ try{ const p=JSON.parse(ev.data);
+      if(p?.name&&typeof p?.position==='number') applyBuyer({name:cap(p.name),position:p.position},true);
+      if(typeof p?.spotsRemaining==='number') applySpots(p.spotsRemaining);
+      if(typeof p?.soldToday==='number') applySold(p.soldToday); }catch{} });
+    es.addEventListener('error',()=>{ if(es&&es.readyState===EventSource.CLOSED){ es.close(); es=null; setTimeout(openSSE,4000); } });
+  }catch{} }
+
+  async function poll(){
+    try{ const [tr,sr]=await Promise.all([fetch(`${API_BASE}${TICKER}`,{cache:'no-store',mode:'cors'}),fetch(`${API_BASE}${SPOTS}`,{cache:'no-store',mode:'cors'})]);
+      let healthy=false;
+      if(tr.ok){ healthy=true; const td=await tr.json(); const entries=Array.isArray(td.entries)?td.entries:[];
+        if(entries.length>0){ const newId=`${entries[0].position??''}-${entries[0].name}`; const isNew=newId!==lastSeenId;
+          if(isNew||buyers.length===0){ buyers=entries.slice(0,1+TAIL_MAX).map(e=>({name:cap(e.name),position:e.position}));
+            const first=lastSeenId===null; lastSeenId=newId; renderBuyer(buyers[0],!first&&isNew); renderTail(); if(!first&&isNew) burst(); } }
+        else if(td.latestEntry) applyBuyer(td.latestEntry,false); }
+      if(sr.ok){ healthy=true; const sd=await sr.json(); if(typeof sd.remaining==='number') applySpots(sd.remaining); if(typeof sd.soldToday==='number') applySold(sd.soldToday); }
+      if(healthy) markConn('ok');
+    }catch{ markConn('offline'); }
+  }
+
+  resizeConfetti();
+  window.addEventListener('resize',resizeConfetti,{passive:true});
+  renderSeats(false); renderSold(false); poll(); setInterval(poll,POLL_MS); openSSE();
+})();
+</script>
+</body>
+</html>

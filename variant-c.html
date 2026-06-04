@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Restackd — Live Overlay · Variant C (Receipt Feed)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * Restackd Live Overlay — VARIANT C · "RECEIPT FEED"
+   * Direction: Conversion-Bro (Stan / Beacons / Komi).
+   * Vertical 9:16 side-rail. Maximal social proof: a live
+   * receipt-style feed where every sale prints a new row that
+   * slides in at the top and pushes the stack down. Urgent seats
+   * banner pinned at top. "watch people buy in real time."
+   *
+   * Layout (vertical):
+   *   ┌──────────────────────┐
+   *   │ ▦ restackd      ●LIVE│  brand
+   *   ├──────────────────────┤
+   *   │ ⚡ ONLY 7 SEATS LEFT  │  urgent banner (lime→red)
+   *   │    $249 LIFETIME · ONCE│
+   *   ├──────────────────────┤
+   *   │ LIVE PURCHASES  ·73 ✓│  feed header w/ total count
+   *   │ ┌──────────────────┐ │
+   *   │ │D Dario   $249  #75│ │  newest receipt (lime flash)
+   *   │ │  just now    PAID │ │
+   *   │ ├──────────────────┤ │
+   *   │ │O Owen    $249  #74│ │  prior receipts (fade down)
+   *   │ │C Carldelll $249#73│ │
+   *   │ │S Smoke   $249  #72│ │
+   *   │ └──────────────────┘ │
+   *   └──────────────────────┘
+   *
+   * PERF: GPU-only entries. Static shadows. New receipt = one
+   * slide-in transform; the stack reflow is layout-only on event,
+   * not a continuous loop, so it encodes cleanly.
+   * ============================================================ */
+
+  :root {
+    --ink:        #08090A;
+    --ink-2:      #0F1012;
+    --ink-3:      #15161B;
+    --line:       #1C1D20;
+    --lime:       #D1FE17;
+    --bone:       #F5F5F5;
+    --hot:        #FF3B3B;
+    --success:    #22C55E;
+    --muted:      #BDBFC3;
+    --mid:        #7A7C80;
+    --w-06:       rgba(255,255,255,0.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0; background: transparent;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; color: var(--bone); overflow: hidden;
+  }
+
+  .root { display: inline-block; padding: 22px; }
+
+  .rail {
+    position: relative;
+    display: flex; flex-direction: column;
+    width: 400px;
+    border-radius: 24px;
+    overflow: hidden;
+    background: var(--ink);
+    border: 1px solid var(--w-06);
+    box-shadow: 0 38px 86px rgba(0,0,0,0.80);
+    transform: translateZ(0); will-change: transform;
+  }
+
+  .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 9; transform: translateZ(0); }
+
+  /* ---------- BRAND ---------- */
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    padding: 16px 20px 13px;
+    background: var(--ink-2);
+    border-bottom: 1px solid var(--w-06);
+  }
+  .brand svg { width: 30px; height: 30px; flex-shrink: 0; }
+  .wm { font-size: 21px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .live {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+    font-size: 11px; font-weight: 800; color: var(--lime);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 4px 8px; border-radius: 5px;
+    background: rgba(209,254,23,0.10); border: 1px solid rgba(209,254,23,0.28);
+  }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 9px rgba(209,254,23,0.8); animation: dot-pulse 1.6s linear infinite; will-change: opacity; }
+  @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  /* ---------- URGENT BANNER ---------- */
+  .urgent-banner {
+    display: flex; flex-direction: column; gap: 5px;
+    padding: 15px 20px;
+    background: linear-gradient(135deg, rgba(209,254,23,0.16), rgba(209,254,23,0.04));
+    border-bottom: 1px solid var(--w-06);
+  }
+  .rail.urgent .urgent-banner { background: linear-gradient(135deg, rgba(255,59,59,0.18), rgba(255,59,59,0.04)); }
+  .ub-top { display: flex; align-items: center; gap: 9px; }
+  .ub-bolt { font-size: 22px; line-height: 1; }
+  .ub-headline {
+    font-size: 23px; font-weight: 800; letter-spacing: -0.02em; line-height: 1;
+    color: var(--lime);
+  }
+  .rail.urgent .ub-headline { color: var(--hot); }
+  .ub-headline .num {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-weight: 800; font-variant-numeric: tabular-nums;
+  }
+  .ub-headline .num.roll { display: inline-block; animation: odometer 0.5s cubic-bezier(0.16,1,0.3,1); }
+  @keyframes odometer { 0%{transform:translate3d(0,-45%,0);opacity:0;} 40%{opacity:1;} 100%{transform:translate3d(0,0,0);opacity:1;} }
+  .ub-sub {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px; font-weight: 700; color: var(--bone);
+    letter-spacing: 0.05em; text-transform: uppercase; padding-left: 31px;
+  }
+
+  /* ---------- FEED ---------- */
+  .feed-hdr {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 13px 20px 10px;
+  }
+  .feed-title {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; color: var(--mid);
+    letter-spacing: 0.16em; text-transform: uppercase;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .feed-title::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 7px rgba(209,254,23,0.7); }
+  .feed-count {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px; font-weight: 800; color: var(--lime);
+    letter-spacing: 0.04em;
+  }
+
+  .feed { padding: 0 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+  .receipt {
+    position: relative;
+    display: grid; grid-template-columns: 40px 1fr auto; gap: 12px;
+    align-items: center;
+    padding: 12px 14px;
+    border-radius: 13px;
+    background: var(--ink-2);
+    border: 1px solid var(--w-06);
+    will-change: transform, opacity;
+  }
+  .receipt.fresh {
+    background: linear-gradient(135deg, rgba(209,254,23,0.13), rgba(209,254,23,0.03));
+    border-color: rgba(209,254,23,0.5);
+    box-shadow: 0 0 22px rgba(209,254,23,0.18);
+  }
+  .receipt.enter { animation: receipt-in 0.65s cubic-bezier(0.16,1,0.3,1) both; }
+  @keyframes receipt-in {
+    0%{opacity:0;transform:translate3d(0,-26px,0) scale(0.96);}
+    60%{opacity:1;transform:translate3d(0,0,0) scale(1.02);}
+    100%{opacity:1;transform:translate3d(0,0,0) scale(1);}
+  }
+  .r-av {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--w-06); color: var(--muted);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 800; line-height: 1; flex-shrink: 0;
+  }
+  .receipt.fresh .r-av {
+    background: linear-gradient(135deg, #D1FE17, #a3c413); color: var(--ink);
+    box-shadow: 0 0 14px rgba(209,254,23,0.4);
+  }
+  .r-mid { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .r-name {
+    font-size: 19px; font-weight: 800; color: var(--bone);
+    line-height: 1; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .r-when {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px; font-weight: 700; color: var(--mid);
+    letter-spacing: 0.03em; text-transform: uppercase;
+  }
+  .r-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .r-amt {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 16px; font-weight: 800; color: var(--bone); line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .receipt.fresh .r-amt { color: var(--lime); }
+  .r-paid {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px; font-weight: 700; color: var(--success);
+    letter-spacing: 0.1em; text-transform: uppercase; line-height: 1;
+  }
+  .r-paid::before { content: '✓'; font-size: 10px; }
+
+  .receipt:nth-child(2){opacity:0.86;}
+  .receipt:nth-child(3){opacity:0.62;}
+  .receipt:nth-child(4){opacity:0.42;}
+  .receipt:nth-child(5){opacity:0.26;}
+  .receipt:nth-child(n+6){display:none;}
+
+  .feed-empty {
+    padding: 26px 18px; text-align: center;
+    font-size: 16px; font-weight: 700; color: var(--mid); font-style: italic;
+  }
+
+  .conn {
+    position: absolute; bottom: 8px; right: 12px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px; color: var(--mid);
+    letter-spacing: 0.08em; text-transform: uppercase; user-select: none; z-index: 10;
+  }
+  .conn.offline { color: var(--hot); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .ub-headline .num.roll, .receipt.enter { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="rail" id="frame">
+    <canvas class="confetti" id="confetti"></canvas>
+
+    <div class="brand">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="Restackd">
+        <g transform="translate(0,2)">
+          <rect x="0"  y="0"  width="64" height="16" rx="2.5" fill="#D1FE17"/>
+          <rect x="0"  y="22" width="64" height="16" rx="2.5" fill="#F5F5F5"/>
+          <rect x="0"  y="44" width="34" height="16" rx="2.5" fill="#7A7C80"/>
+          <rect x="42" y="44" width="22" height="16" rx="2.5" fill="#7A7C80"/>
+        </g>
+      </svg>
+      <span class="wm">restackd</span>
+      <span class="live"><span class="live-dot"></span>LIVE</span>
+    </div>
+
+    <div class="urgent-banner">
+      <div class="ub-top">
+        <span class="ub-bolt" aria-hidden="true">⚡</span>
+        <span class="ub-headline">ONLY <span class="num" id="ubNum">10</span> SEATS LEFT</span>
+      </div>
+      <div class="ub-sub">$249 LIFETIME · TAP @startwithjake BIO</div>
+    </div>
+
+    <div class="feed-hdr">
+      <span class="feed-title">LIVE PURCHASES</span>
+      <span class="feed-count" id="feedCount"></span>
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="feed-empty" id="feedEmpty">Waiting for the next sale…</div>
+    </div>
+
+    <span class="conn" id="conn"></span>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_BASE='https://restackd.com', TICKER='/api/founding/ticker', SPOTS='/api/overlay/spots', SSE='/api/overlay/stream';
+  const POLL_MS=3000, FEED_MAX=5, URGENT_AT=5, PRICE='$249';
+  const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti');
+  const $feed=document.getElementById('feed'), $ubNum=document.getElementById('ubNum'), $feedCount=document.getElementById('feedCount');
+  const $rail=$frame, $conn=document.getElementById('conn');
+
+  let buyers=[], lastSeenId=null, spots=10, prevSpots=10, soldTotal=null, freshId=null;
+
+  const cap=s=>!s?'':s[0].toUpperCase()+s.slice(1).toLowerCase();
+  const initial=s=>(s||'?')[0].toUpperCase();
+
+  function renderFeed(animateTop){
+    if(buyers.length===0){ $feed.innerHTML=`<div class="feed-empty">Waiting for the next sale…</div>`; return; }
+    $feed.innerHTML=buyers.slice(0,FEED_MAX).map((b,i)=>{
+      const isFresh=i===0 && b.id===freshId;
+      const pos=b.position?`#${b.position}`:'';
+      const when=b.when||'just now';
+      return `<div class="receipt ${isFresh?'fresh':''} ${isFresh&&animateTop?'enter':''}">
+        <div class="r-av">${initial(b.name)}</div>
+        <div class="r-mid"><div class="r-name">${cap(b.name)}</div><div class="r-when">${when} · ${pos}</div></div>
+        <div class="r-right"><div class="r-amt">${PRICE}</div><span class="r-paid">PAID</span></div>
+      </div>`;
+    }).join('');
+  }
+  function renderSeats(animate){
+    const v=String(Math.max(0,spots));
+    if($ubNum.textContent!==v){ $ubNum.textContent=v;
+      if(animate){ $ubNum.classList.remove('roll'); void $ubNum.offsetWidth; $ubNum.classList.add('roll'); } }
+    $rail.classList.toggle('urgent', spots<=URGENT_AT);
+  }
+  function renderCount(){ $feedCount.textContent = (soldTotal!=null) ? `${soldTotal} members` : ''; }
+
+  // confetti
+  const ctx=$confetti.getContext('2d'); let cw=0,ch=0;
+  function resizeConfetti(){ cw=$frame.clientWidth; ch=$frame.clientHeight; const dpr=Math.min(window.devicePixelRatio||1,2);
+    $confetti.width=cw*dpr; $confetti.height=ch*dpr; $confetti.style.width=cw+'px'; $confetti.style.height=ch+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  const parts=[];
+  function burst(){ if(cw===0) resizeConfetti(); const colors=['#D1FE17','#a3c413','#F5F5F5']; const ox=cw*0.5, oy=ch*0.42;
+    for(let i=0;i<26;i++){ const a=Math.random()*Math.PI*2, sp=5+Math.random()*9;
+      parts.push({x:ox+(Math.random()*36-18),y:oy,vx:Math.cos(a)*sp*0.7,vy:Math.sin(a)*sp*0.7-5,rot:Math.random()*6.28,vr:(Math.random()-0.5)*0.4,size:5+Math.random()*6,color:colors[(Math.random()*colors.length)|0],life:1}); }
+    if(!raf) raf=requestAnimationFrame(tick); }
+  let raf=0;
+  function tick(){ ctx.clearRect(0,0,cw,ch); const g=0.45,d=0.985;
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.013;
+      if(p.life<=0||p.y>ch+20){ parts.splice(i,1); continue; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=Math.max(0,Math.min(1,p.life)); ctx.fillStyle=p.color; ctx.fillRect(-p.size/2,-p.size*0.18,p.size,p.size*0.36); ctx.restore(); }
+    raf = parts.length>0 ? requestAnimationFrame(tick) : 0; }
+
+  function applyBuyer(entry, animate){
+    if(!entry?.name) return; const id=`${entry.position??''}-${entry.name}`; if(id===lastSeenId) return;
+    const first=lastSeenId===null; lastSeenId=id;
+    buyers=[{name:entry.name,position:entry.position,when:entry.timeLabel||'just now',id},...buyers.filter(b=>b.name!==entry.name)].slice(0,FEED_MAX);
+    const go=animate&&!first; freshId = go ? id : freshId; renderFeed(go); if(go) burst();
+  }
+  function applySpots(r){ if(typeof r!=='number'||r===spots) return; prevSpots=spots; spots=r; renderSeats(prevSpots!==spots); }
+
+  function markConn(s){ if(s==='offline'){ $conn.textContent='● offline'; $conn.classList.add('offline'); } else { $conn.textContent=''; $conn.classList.remove('offline'); } }
+
+  let es=null;
+  function openSSE(){ try{ es=new EventSource(`${API_BASE}${SSE}`);
+    es.addEventListener('message',ev=>{ try{ const p=JSON.parse(ev.data);
+      if(p?.name&&typeof p?.position==='number') applyBuyer({name:cap(p.name),position:p.position,timeLabel:p.timeLabel||'just now'},true);
+      if(typeof p?.spotsRemaining==='number') applySpots(p.spotsRemaining); }catch{} });
+    es.addEventListener('error',()=>{ if(es&&es.readyState===EventSource.CLOSED){ es.close(); es=null; setTimeout(openSSE,4000); } });
+  }catch{} }
+
+  async function poll(){
+    try{ const [tr,sr]=await Promise.all([fetch(`${API_BASE}${TICKER}`,{cache:'no-store',mode:'cors'}),fetch(`${API_BASE}${SPOTS}`,{cache:'no-store',mode:'cors'})]);
+      let healthy=false;
+      if(tr.ok){ healthy=true; const td=await tr.json(); const entries=Array.isArray(td.entries)?td.entries:[];
+        if(typeof td.realCount==='number') { soldTotal=td.realCount; renderCount(); }
+        if(entries.length>0){ const newId=`${entries[0].position??''}-${entries[0].name}`; const isNew=newId!==lastSeenId;
+          if(isNew||buyers.length===0){ buyers=entries.slice(0,FEED_MAX).map(e=>({name:cap(e.name),position:e.position,when:e.timeLabel||'just now',id:`${e.position??''}-${e.name}`}));
+            const first=lastSeenId===null; lastSeenId=newId; if(!first&&isNew) freshId=newId; renderFeed(!first&&isNew); if(!first&&isNew) burst(); } }
+        else if(td.latestEntry) applyBuyer(td.latestEntry,false); }
+      if(sr.ok){ healthy=true; const sd=await sr.json(); if(typeof sd.remaining==='number') applySpots(sd.remaining); }
+      if(healthy) markConn('ok');
+    }catch{ markConn('offline'); }
+  }
+
+  resizeConfetti();
+  window.addEventListener('resize',resizeConfetti,{passive:true});
+  renderSeats(false); poll(); setInterval(poll,POLL_MS); openSSE();
+})();
+</script>
+</body>
+</html>

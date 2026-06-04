@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Restackd — Live Overlay · Variant B (Glass Ticket)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * Restackd Live Overlay — VARIANT B · "GLASS TICKET"
+   * Direction: Modernist Minimal (Linear / Stripe / Vercel).
+   * Vertical 9:16 side-rail. Frosted glass, tight type, abundant
+   * negative space, mono eyebrow labels, ONE lime accent. A slim
+   * vertical seats-meter on the left edge is the only loud element.
+   * Reads as premium product UI, not a hype banner.
+   *
+   * Layout (vertical):
+   *   ┌──────────────────┐
+   *   │▍ ▦ restackd  LIVE│  brand + thin meter spine on left
+   *   │▍ ─────────────── │
+   *   │▍ SEATS REMAINING │  mono eyebrow
+   *   │▍   07            │  number, restrained
+   *   │▍ 3 claimed today │
+   *   │▍ ─────────────── │
+   *   │▍ $249  lifetime  │  price line (lime $ only)
+   *   │▍ ─────────────── │
+   *   │▍ LATEST          │
+   *   │▍ ◦ Dario     #75 │  newest (subtle lime tick on new)
+   *   │▍ ◦ Owen          │  recent, calm
+   *   │▍ ◦ Carldelll     │
+   *   └──────────────────┘
+   *
+   * PERF: GPU-only. Static shadows. backdrop-filter is set ONCE
+   * (not animated) so it composites once and stays cheap.
+   * ============================================================ */
+
+  :root {
+    --ink:        #08090A;
+    --ink-2:      #0F1012;
+    --ink-3:      #13141A;
+    --line:       #1C1D20;
+    --lime:       #D1FE17;
+    --bone:       #F5F5F5;
+    --hot:        #FF5B5B;
+    --muted:      #BDBFC3;
+    --mid:        #7A7C80;
+    --w-06:       rgba(255,255,255,0.055);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0; background: transparent;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; color: var(--bone); overflow: hidden;
+  }
+
+  .root { display: inline-block; padding: 22px; }
+
+  .rail {
+    position: relative;
+    display: flex; flex-direction: column;
+    width: 372px;
+    border-radius: 20px;
+    overflow: hidden;
+    background: rgba(15,16,18,0.72);
+    backdrop-filter: blur(18px) saturate(1.1);
+    -webkit-backdrop-filter: blur(18px) saturate(1.1);
+    border: 1px solid rgba(255,255,255,0.09);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.62), inset 0 1px 0 rgba(255,255,255,0.05);
+    transform: translateZ(0); will-change: transform;
+  }
+
+  .confetti { position: absolute; inset: 0; pointer-events: none; z-index: 7; transform: translateZ(0); }
+
+  /* The seats-meter spine — the ONE loud element. A vertical bar
+     on the left edge that fills lime, depleting as seats sell. */
+  .spine {
+    position: absolute;
+    top: 0; bottom: 0; left: 0;
+    width: 4px; z-index: 6;
+    background: rgba(255,255,255,0.06);
+    overflow: hidden;
+  }
+  .spine-fill {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    height: 70%;
+    background: linear-gradient(180deg, var(--lime), rgba(209,254,23,0.5));
+    box-shadow: 0 0 14px rgba(209,254,23,0.55);
+    transition: height 0.8s cubic-bezier(0.16,1,0.3,1);
+    will-change: height;
+  }
+  .rail.urgent .spine-fill { background: linear-gradient(180deg, var(--hot), rgba(255,91,91,0.5)); box-shadow: 0 0 14px rgba(255,91,91,0.55); }
+
+  .inner { padding: 20px 22px 22px 28px; }
+
+  /* ---------- BRAND ---------- */
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand svg { width: 28px; height: 28px; flex-shrink: 0; }
+  .wm { font-size: 20px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .live {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; font-weight: 700; color: var(--muted);
+    letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 8px rgba(209,254,23,0.8); animation: dot-pulse 1.8s linear infinite; will-change: opacity; }
+  @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  .rule { height: 1px; background: rgba(255,255,255,0.07); margin: 18px 0; }
+
+  /* ---------- SEATS ---------- */
+  .eyebrow {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 10px; font-weight: 700; color: var(--mid);
+    letter-spacing: 0.2em; text-transform: uppercase;
+  }
+  .seats-num {
+    font-size: 88px; font-weight: 800; color: var(--bone);
+    line-height: 0.92; letter-spacing: -0.05em;
+    margin-top: 6px;
+    font-variant-numeric: tabular-nums;
+    display: inline-block;
+  }
+  .seats-num .accent { color: var(--lime); }
+  .rail.urgent .seats-num { color: var(--hot); }
+  .seats-num.roll { animation: odometer 0.5s cubic-bezier(0.16,1,0.3,1); }
+  @keyframes odometer { 0%{transform:translate3d(0,-45%,0);opacity:0;} 40%{opacity:1;} 100%{transform:translate3d(0,0,0);opacity:1;} }
+  .seats-sub {
+    font-size: 14px; font-weight: 600; color: var(--muted);
+    margin-top: 6px; letter-spacing: -0.01em;
+  }
+  .seats-sub b { color: var(--bone); font-weight: 700; }
+
+  /* ---------- PRICE ---------- */
+  .price { display: flex; align-items: baseline; gap: 9px; }
+  .price-amt { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; color: var(--bone); }
+  .price-amt .accent { color: var(--lime); }
+  .price-term {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px; font-weight: 700; color: var(--mid);
+    letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .price-cta { font-size: 13px; font-weight: 600; color: var(--muted); margin-top: 7px; letter-spacing: -0.01em; }
+  .price-cta b { color: var(--bone); font-weight: 700; }
+
+  /* ---------- LATEST + LIST ---------- */
+  .list-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 13px; }
+  .row {
+    display: flex; align-items: center; gap: 11px;
+    margin-bottom: 13px;
+    animation: row-in 0.5s cubic-bezier(0.16,1,0.3,1) both;
+    will-change: transform, opacity;
+  }
+  @keyframes row-in { 0%{opacity:0;transform:translate3d(0,7px,0);} 100%{opacity:var(--o,1);transform:translate3d(0,0,0);} }
+  .row-av {
+    width: 34px; height: 34px; border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    color: var(--bone);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 800; line-height: 1; flex-shrink: 0;
+  }
+  .row.fresh .row-av { background: rgba(209,254,23,0.14); color: var(--lime); box-shadow: inset 0 0 0 1px rgba(209,254,23,0.35); }
+  .row-name {
+    font-size: 18px; font-weight: 700; color: var(--bone);
+    line-height: 1; flex: 1; letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .row-pos {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px; font-weight: 700; color: var(--mid); line-height: 1;
+  }
+  .row.fresh .row-pos { color: var(--lime); }
+  .row:nth-of-type(2){--o:0.78;opacity:0.78;}
+  .row:nth-of-type(3){--o:0.55;opacity:0.55;}
+  .row:nth-of-type(4){--o:0.34;opacity:0.34;}
+  .row:nth-of-type(n+5){display:none;}
+  .row.fresh.enter { animation: fresh-pop 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+  @keyframes fresh-pop { 0%{opacity:0;transform:translate3d(0,-10px,0) scale(0.97);} 100%{opacity:1;transform:translate3d(0,0,0) scale(1);} }
+  .empty { font-size: 15px; font-weight: 600; color: var(--mid); font-style: italic; }
+
+  .conn {
+    position: absolute; bottom: 8px; right: 12px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 9px; color: var(--mid);
+    letter-spacing: 0.08em; text-transform: uppercase; user-select: none; z-index: 10;
+  }
+  .conn.offline { color: var(--hot); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .live-dot, .seats-num.roll, .row, .row.fresh.enter { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="root">
+  <div class="rail" id="frame">
+    <canvas class="confetti" id="confetti"></canvas>
+    <div class="spine"><div class="spine-fill" id="spineFill"></div></div>
+
+    <div class="inner">
+      <div class="brand">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-label="Restackd">
+          <g transform="translate(0,2)">
+            <rect x="0"  y="0"  width="64" height="16" rx="2.5" fill="#D1FE17"/>
+            <rect x="0"  y="22" width="64" height="16" rx="2.5" fill="#F5F5F5"/>
+            <rect x="0"  y="44" width="34" height="16" rx="2.5" fill="#7A7C80"/>
+            <rect x="42" y="44" width="22" height="16" rx="2.5" fill="#7A7C80"/>
+          </g>
+        </svg>
+        <span class="wm">restackd</span>
+        <span class="live"><span class="live-dot"></span>LIVE</span>
+      </div>
+
+      <div class="rule"></div>
+
+      <div class="eyebrow">SEATS REMAINING</div>
+      <span class="seats-num" id="seatsNum">10</span>
+      <div class="seats-sub" id="seatsSub"><b>0</b> claimed today</div>
+
+      <div class="rule"></div>
+
+      <div class="price">
+        <span class="price-amt"><span class="accent">$</span>249</span>
+        <span class="price-term">lifetime · once</span>
+      </div>
+      <div class="price-cta">Tap <b>@startwithjake</b> in bio</div>
+
+      <div class="rule"></div>
+
+      <div class="list-hdr"><span class="eyebrow">LATEST MEMBERS</span></div>
+      <div id="list">
+        <div class="empty" id="empty">Waiting for the next sale…</div>
+      </div>
+    </div>
+
+    <span class="conn" id="conn"></span>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_BASE='https://restackd.com', TICKER='/api/founding/ticker', SPOTS='/api/overlay/spots', SSE='/api/overlay/stream';
+  const POLL_MS=3000, LIST_MAX=4, URGENT_AT=5, TOTAL_DEFAULT=10;
+  const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti');
+  const $list=document.getElementById('list'), $seatsNum=document.getElementById('seatsNum'), $seatsSub=document.getElementById('seatsSub');
+  const $spineFill=document.getElementById('spineFill'), $rail=$frame, $conn=document.getElementById('conn');
+
+  let buyers=[], lastSeenId=null, spots=10, prevSpots=10, total=TOTAL_DEFAULT, soldToday=0, freshId=null;
+
+  const cap=s=>!s?'':s[0].toUpperCase()+s.slice(1).toLowerCase();
+  const initial=s=>(s||'?')[0].toUpperCase();
+
+  function renderList(freshOnTop){
+    if(buyers.length===0){ $list.innerHTML=`<div class="empty">Waiting for the next sale…</div>`; return; }
+    $list.innerHTML=buyers.slice(0,LIST_MAX).map((b,i)=>{
+      const isFresh=i===0 && b.id===freshId;
+      const pos=b.position?`<span class="row-pos">#${b.position}</span>`:'';
+      return `<div class="row ${i===0?'fresh':''} ${isFresh&&freshOnTop?'enter':''}"><div class="row-av">${initial(b.name)}</div><div class="row-name">${cap(b.name)}</div>${pos}</div>`;
+    }).join('');
+  }
+  function renderSeats(animate){
+    const v=Math.max(0,spots), vs=String(v);
+    if($seatsNum.textContent!==vs){ $seatsNum.textContent=vs;
+      if(animate){ $seatsNum.classList.remove('roll'); void $seatsNum.offsetWidth; $seatsNum.classList.add('roll'); } }
+    $rail.classList.toggle('urgent', v<=URGENT_AT);
+    const pct=total>0?Math.max(0,Math.min(100,(v/total)*100)):0;
+    $spineFill.style.height=pct+'%';
+  }
+  function renderSold(){ $seatsSub.innerHTML=`<b>${Math.max(0,soldToday)}</b> claimed today`; }
+
+  // confetti (subtle — fewer, lime + bone only)
+  const ctx=$confetti.getContext('2d'); let cw=0,ch=0;
+  function resizeConfetti(){ cw=$frame.clientWidth; ch=$frame.clientHeight; const dpr=Math.min(window.devicePixelRatio||1,2);
+    $confetti.width=cw*dpr; $confetti.height=ch*dpr; $confetti.style.width=cw+'px'; $confetti.style.height=ch+'px'; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  const parts=[];
+  function burst(){ if(cw===0) resizeConfetti(); const colors=['#D1FE17','#F5F5F5']; const ox=cw*0.5, oy=ch*0.62;
+    for(let i=0;i<18;i++){ const a=Math.random()*Math.PI*2, sp=4+Math.random()*7;
+      parts.push({x:ox+(Math.random()*30-15),y:oy,vx:Math.cos(a)*sp*0.6,vy:Math.sin(a)*sp*0.6-4,rot:Math.random()*6.28,vr:(Math.random()-0.5)*0.3,size:4+Math.random()*5,color:colors[(Math.random()*colors.length)|0],life:1}); }
+    if(!raf) raf=requestAnimationFrame(tick); }
+  let raf=0;
+  function tick(){ ctx.clearRect(0,0,cw,ch); const g=0.4,d=0.985;
+    for(let i=parts.length-1;i>=0;i--){ const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.014;
+      if(p.life<=0||p.y>ch+20){ parts.splice(i,1); continue; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot); ctx.globalAlpha=Math.max(0,Math.min(1,p.life)); ctx.fillStyle=p.color; ctx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4); ctx.restore(); }
+    raf = parts.length>0 ? requestAnimationFrame(tick) : 0; }
+
+  function applyBuyer(entry, animate){
+    if(!entry?.name) return; const id=`${entry.position??''}-${entry.name}`; if(id===lastSeenId) return;
+    const first=lastSeenId===null; lastSeenId=id;
+    buyers=[{name:entry.name,position:entry.position,id},...buyers.filter(b=>b.name!==entry.name)].slice(0,LIST_MAX);
+    const go=animate&&!first; freshId = go ? id : freshId; renderList(go); if(go) burst();
+  }
+  function applySpots(r){ if(typeof r!=='number'||r===spots) return; prevSpots=spots; spots=r; if(spots>total) total=spots; renderSeats(prevSpots!==spots); }
+  function applySold(n){ if(typeof n!=='number'||n===soldToday) return; soldToday=n; renderSold(); }
+
+  function markConn(s){ if(s==='offline'){ $conn.textContent='● offline'; $conn.classList.add('offline'); } else { $conn.textContent=''; $conn.classList.remove('offline'); } }
+
+  let es=null;
+  function openSSE(){ try{ es=new EventSource(`${API_BASE}${SSE}`);
+    es.addEventListener('message',ev=>{ try{ const p=JSON.parse(ev.data);
+      if(p?.name&&typeof p?.position==='number') applyBuyer({name:cap(p.name),position:p.position},true);
+      if(typeof p?.spotsRemaining==='number') applySpots(p.spotsRemaining);
+      if(typeof p?.soldToday==='number') applySold(p.soldToday); }catch{} });
+    es.addEventListener('error',()=>{ if(es&&es.readyState===EventSource.CLOSED){ es.close(); es=null; setTimeout(openSSE,4000); } });
+  }catch{} }
+
+  async function poll(){
+    try{ const [tr,sr]=await Promise.all([fetch(`${API_BASE}${TICKER}`,{cache:'no-store',mode:'cors'}),fetch(`${API_BASE}${SPOTS}`,{cache:'no-store',mode:'cors'})]);
+      let healthy=false;
+      if(tr.ok){ healthy=true; const td=await tr.json(); const entries=Array.isArray(td.entries)?td.entries:[];
+        if(entries.length>0){ const newId=`${entries[0].position??''}-${entries[0].name}`; const isNew=newId!==lastSeenId;
+          if(isNew||buyers.length===0){ buyers=entries.slice(0,LIST_MAX).map(e=>({name:cap(e.name),position:e.position,id:`${e.position??''}-${e.name}`}));
+            const first=lastSeenId===null; lastSeenId=newId; if(!first&&isNew) freshId=newId; renderList(!first&&isNew); if(!first&&isNew) burst(); } }
+        else if(td.latestEntry) applyBuyer(td.latestEntry,false); }
+      if(sr.ok){ healthy=true; const sd=await sr.json(); if(typeof sd.total==='number') total=sd.total; if(typeof sd.remaining==='number') applySpots(sd.remaining); if(typeof sd.soldToday==='number') applySold(sd.soldToday); }
+      if(healthy) markConn('ok');
+    }catch{ markConn('offline'); }
+  }
+
+  resizeConfetti();
+  window.addEventListener('resize',resizeConfetti,{passive:true});
+  renderSeats(false); renderSold(); poll(); setInterval(poll,POLL_MS); openSSE();
+})();
+</script>
+</body>
+</html>
