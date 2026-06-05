@@ -23,7 +23,7 @@
    *   │  SEATS LEFT    │
    *   │  3 sold today  │
    *   ├────────────────┤
-   *   │ DWA 3.0 + RESTACKD  │  price card
+   *   │ $49 LIFETIME  │  price card
    *   │ TAP @bio       │  cta
    *   ├────────────────┤
    *   │ 🟢 DARIO  #75  │  newest buyer (lime on new)
@@ -460,7 +460,7 @@
         <div class="to-eyebrow">NEW MEMBER · JUST JOINED</div>
         <div class="to-name" id="toName">Dario</div>
         <div class="to-thanks">WELCOME TO RESTACKD</div>
-        <div class="to-pill" id="toPill">DWA 3.0 + RESTACKD</div>
+        <div class="to-pill" id="toPill">$49 LIFETIME</div>
         <div class="to-sub">Thank you for joining the movement</div>
       </div>
     </div>
@@ -479,29 +479,21 @@
     </div>
 
     <div class="seats" id="seats">
-      <span class="seats-num" id="seatsNum">10</span>
-      <span class="seats-label">SEATS LEFT</span>
-      <span class="seats-sold zero" id="seatsSold">0 SOLD TODAY</span>
+      <span class="seats-num" id="seatsNum">0</span>
+      <span class="seats-label">SALES TODAY</span>
+      <span class="seats-sold" id="seatsSold">JOIN THEM →</span>
     </div>
 
     <div class="price" id="price">
-      <!-- Frame 1: the bundle price -->
+      <!-- Frame 1: the price -->
       <div class="price-frame show" id="priceFrame1">
         <div class="price-row">
-          <span class="price-amt">$497</span>
-          <span class="price-was">$797</span>
+          <span class="price-amt">$49</span>
+          <span class="price-term">Lifetime · once</span>
         </div>
-        <div class="price-cta">DWA 3.0 + RESTACKD · TAP BIO →</div>
+        <div class="price-cta">TAP @startwithjake BIO →</div>
       </div>
-      <!-- Frame 2: Restackd included free -->
-      <div class="price-frame" id="priceFrame3">
-        <div class="price-row">
-          <span class="price-term2">RESTACKD</span>
-          <span class="price-amt">FREE</span>
-        </div>
-        <div class="price-cta">$249 VALUE · INCLUDED IN THE BUNDLE</div>
-      </div>
-      <!-- Frame 3: $0 down BNPL -->
+      <!-- Frame 2: $0 down BNPL -->
       <div class="price-frame" id="priceFrame2">
         <div class="bnpl-top">
           <span class="bnpl-amt">$0</span>
@@ -537,8 +529,8 @@
   const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti'), $moneyRain=document.getElementById('moneyRain');
   const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
   const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
-  // Display order: bundle price → Restackd free → $0 down BNPL
-  const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame3'), document.getElementById('priceFrame2')];
+  // Display order: $49 price → $0 down BNPL
+  const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
   const $takeover=document.getElementById('takeover'), $toFx=document.getElementById('takeoverFx');
   const $toName=document.getElementById('toName'), $toPill=document.getElementById('toPill');
 
@@ -615,7 +607,7 @@
     if(!b || !$takeover) return;
     clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
     $toName.textContent = cap(b.name);
-    $toPill.textContent = 'DWA 3.0 + RESTACKD';            // no founder number — founders are closed
+    $toPill.textContent = '$49 LIFETIME';            // no founder number — founders are closed
     // restart entry animation
     $takeover.classList.remove('out','show'); void $takeover.offsetWidth;
     $takeover.setAttribute('aria-hidden','false');
@@ -661,7 +653,7 @@
       <div class="buyer-av">${initial(b.name)}</div>
       <div class="buyer-txt">
         <div class="buyer-name">${cap(b.name)}</div>
-        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">DWA 3.0 + RESTACKD</span></div>
+        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">$49 LIFETIME</span></div>
       </div>`;
     if(animate) $buyer.classList.add('enter');
   }
@@ -670,15 +662,11 @@
     $tail.innerHTML=`<div class="tail-hdr">JUST JOINED</div>`+rest.map(b=>`
       <div class="tail-row"><div class="tail-av">${initial(b.name)}</div><div class="tail-name">${cap(b.name)}</div></div>`).join('');
   }
-  function renderSeats(animate){
-    const v=String(Math.max(0,spots));
-    if($seatsNum.textContent!==v){ $seatsNum.textContent=v; if(animate){ $seatsNum.classList.remove('roll'); void $seatsNum.offsetWidth; $seatsNum.classList.add('roll'); } }
-    $seats.classList.toggle('urgent', spots<=URGENT_AT);
-  }
+  // HERO = sales today (a number that climbs). Rolls up on each new sale.
   function renderSold(animate){
-    const n=Math.max(0,soldToday), t=`${n} SOLD TODAY`;
-    if($seatsSold.textContent!==t){ $seatsSold.textContent=t; $seatsSold.classList.toggle('zero',n===0);
-      if(animate&&n>0){ $seatsSold.classList.remove('bump'); void $seatsSold.offsetWidth; $seatsSold.classList.add('bump'); } }
+    const v=String(Math.max(0,soldToday));
+    if($seatsNum.textContent!==v){ $seatsNum.textContent=v;
+      if(animate){ $seatsNum.classList.remove('roll'); void $seatsNum.offsetWidth; $seatsNum.classList.add('roll'); } }
   }
 
   // confetti
@@ -708,7 +696,9 @@
     buyers=[{name:entry.name,position:entry.position},...buyers.filter(b=>b.name!==entry.name)].slice(0,1+TAIL_MAX);
     const go=animate&&!first; renderBuyer(buyers[0],go); renderTail(); if(go){ burst(); fireTakeover(buyers[0]); }
   }
-  function applySpots(r){ if(typeof r!=='number'||r===spots) return; prevSpots=spots; spots=r; renderSeats(prevSpots!==spots); }
+  // Seats-left is no longer shown (we sell $49, no daily cap). We still accept
+  // spotsRemaining off the wire but don't render it — the hero is sales-today.
+  function applySpots(r){ if(typeof r!=='number') return; spots=r; }
   function applySold(n){ if(typeof n!=='number'||n===soldToday) return; prevSold=soldToday; soldToday=n; renderSold(true);
     if(n>prevSold&&prevSold!==0) spawnMoney(8); else if(n>prevSold) spawnMoney(5); }
 
@@ -738,7 +728,7 @@
 
   resizeConfetti();
   window.addEventListener('resize',resizeConfetti,{passive:true});
-  renderSeats(false); renderSold(false); poll(); setInterval(poll,POLL_MS); openSSE();
+  renderSold(false); poll(); setInterval(poll,POLL_MS); openSSE();
   // Start price rotation unless the viewer prefers reduced motion.
   if(!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     setInterval(rotatePrice, PRICE_ROTATE_MS);
