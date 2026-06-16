@@ -1,4 +1,7 @@
-node_modules/
-preview-*.png
-.vercel/
-.DS_Store
+_*.png
+_*.mjs
+_celebration/
+_q/
+_b/
+_j*/
+snap-*.mjs
