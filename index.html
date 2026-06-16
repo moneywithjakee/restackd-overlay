@@ -11,28 +11,27 @@
   /* ============================================================
    * Restackd Live Overlay — VARIANT A · "HYPE STACK"
    * Direction: Hype-Energy (Robinhood / Cash App).
-   * Vertical 9:16 side-rail. Big lime SEATS number hero, price
-   * card, live buyer card that flashes lime on a sale, recent tail.
-   * Selling Restackd standalone for $49 (lifetime). On a real sale the whole
-   * overlay takes over for ~60s to celebrate the buyer (queued back-to-back).
+   * Vertical 9:16 side-rail. HERO is the live joiner feed (no sales
+   * counter) — newest member spotlighted under a "JOINING NOW" pulse,
+   * recent members stacked below, price card at the bottom.
+   * Selling Restackd $249 lifetime (1:1 coaching is an optional add-on
+   * toggle at checkout). On a real sale the whole overlay takes over
+   * for ~60s to celebrate the buyer (queued back-to-back).
    *
    * Layout (vertical, pinned top-left of TikTok portrait frame):
    *   ┌────────────────┐
    *   │ ▦ restackd ●LIVE│  brand
    *   ├────────────────┤
-   *   │      12         │  BIG sales-today counter (climbs)
-   *   │  SALES TODAY    │
-   *   │  JOIN THEM →    │
-   *   ├────────────────┤
-   *   │ $49 LIFETIME    │  price card (rotates → $0 down · Klarna/Afterpay)
-   *   │ TAP @bio        │  cta
-   *   ├────────────────┤
-   *   │ 🟢 DARIO        │  newest buyer (lime on new) · $49 LIFETIME
+   *   │ ● JOINING NOW   │  live header
+   *   │ 🟢 LYNDA        │  newest member spotlight (hero)
    *   │ JUST JOINED     │
    *   ├────────────────┤
-   *   │ • Owen          │  recent tail (faded)
-   *   │ • Carldelll     │
-   *   │ • Smoke         │
+   *   │ • James         │  recent members (faded)
+   *   │ • Robert        │
+   *   │ • Edgar         │
+   *   ├────────────────┤
+   *   │ $249 LIFETIME   │  price card (rotates → $0 down · Klarna/Afterpay)
+   *   │ + COACHING @ CO │
    *   └────────────────┘
    *
    * PERF: GPU-only (transform + opacity). Static shadows. No
@@ -127,40 +126,21 @@
   }
   @keyframes dot-pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
 
-  /* ---------- SEATS HERO ---------- */
-  .seats {
-    position: relative;
-    display: flex; flex-direction: column; align-items: center;
-    padding: 18px 22px 20px;
-    text-align: center;
+  /* ---------- "JOINING NOW" HERO HEADER ---------- */
+  .joinhdr {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 16px 18px 12px;
+    font-size: 20px; font-weight: 900; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--lime); line-height: 1;
+    text-shadow: 0 0 16px rgba(209,254,23,0.35);
   }
-  .seats-num {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 150px; font-weight: 800; color: var(--lime);
-    line-height: 0.92; letter-spacing: -0.06em;
-    text-shadow: 0 0 22px rgba(209,254,23,0.45);
-    font-variant-numeric: tabular-nums;
+  .joinhdr-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--lime);
+    box-shadow: 0 0 12px rgba(209,254,23,0.9);
+    animation: dot-pulse 1.4s ease-in-out infinite;
+    will-change: opacity, transform;
   }
-  .seats-num.roll { animation: odometer 0.5s cubic-bezier(0.16,1,0.3,1); }
-  @keyframes odometer {
-    0%{transform:translate3d(0,-55%,0);opacity:0;} 40%{opacity:1;} 100%{transform:translate3d(0,0,0);opacity:1;}
-  }
-  .seats.urgent .seats-num { color: var(--hot); text-shadow: 0 0 24px rgba(255,59,59,0.5); }
-  .seats-label {
-    font-size: 22px; font-weight: 900; letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--bone); line-height: 1;
-    margin-top: 6px;
-  }
-  .seats-sold {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 16px; font-weight: 800; color: var(--lime);
-    letter-spacing: 0.04em; text-transform: uppercase;
-    margin-top: 10px; opacity: 0.95;
-    transition: opacity 0.3s ease;
-  }
-  .seats-sold.zero { opacity: 0.38; }
-  .seats-sold.bump { animation: bump 0.6s cubic-bezier(0.16,1,0.3,1); }
-  @keyframes bump { 0%{transform:scale(1);} 30%{transform:scale(1.22);} 100%{transform:scale(1);} }
 
   /* ---------- PRICE CARD (rotates: price  <->  $0-down BNPL) ---------- */
   .price {
@@ -461,7 +441,7 @@
         <div class="to-eyebrow">NEW MEMBER · JUST JOINED</div>
         <div class="to-name" id="toName">Dario</div>
         <div class="to-thanks">WELCOME TO RESTACKD</div>
-        <div class="to-pill" id="toPill">$49 LIFETIME</div>
+        <div class="to-pill" id="toPill">$249 LIFETIME</div>
         <div class="to-sub">Thank you for joining the movement</div>
       </div>
     </div>
@@ -479,20 +459,24 @@
       <span class="live"><span class="live-dot"></span>LIVE</span>
     </div>
 
-    <div class="seats" id="seats">
-      <span class="seats-num" id="seatsNum">0</span>
-      <span class="seats-label">SALES TODAY</span>
-      <span class="seats-sold" id="seatsSold">JOIN THEM →</span>
+    <!-- HERO: who's joining (replaces the sales counter) -->
+    <div class="joinhdr"><span class="joinhdr-dot"></span>JOINING NOW</div>
+    <div class="buyer" id="buyer">
+      <div class="buyer-empty" id="buyerEmpty">New members joining live…</div>
+    </div>
+
+    <div class="tail" id="tail">
+      <div class="tail-hdr">RECENT MEMBERS</div>
     </div>
 
     <div class="price" id="price">
       <!-- Frame 1: the price -->
       <div class="price-frame show" id="priceFrame1">
         <div class="price-row">
-          <span class="price-amt">$49</span>
+          <span class="price-amt">$249</span>
           <span class="price-term">Lifetime · once</span>
         </div>
-        <div class="price-cta">TAP @startwithjake BIO →</div>
+        <div class="price-cta">+ 1:1 COACHING AT CHECKOUT</div>
       </div>
       <!-- Frame 2: $0 down BNPL -->
       <div class="price-frame" id="priceFrame2">
@@ -511,14 +495,6 @@
       </div>
     </div>
 
-    <div class="buyer" id="buyer">
-      <div class="buyer-empty" id="buyerEmpty">Waiting for the next sale…</div>
-    </div>
-
-    <div class="tail" id="tail">
-      <div class="tail-hdr">JUST JOINED</div>
-    </div>
-
     <span class="conn" id="conn"></span>
   </div>
 </div>
@@ -528,9 +504,9 @@
   const API_BASE='https://restackd.com', TICKER='/api/founding/ticker', SPOTS='/api/overlay/spots', SSE='/api/overlay/stream';
   const POLL_MS=3000, TAIL_MAX=3, URGENT_AT=5;
   const $frame=document.getElementById('frame'), $confetti=document.getElementById('confetti'), $moneyRain=document.getElementById('moneyRain');
-  const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail'), $seats=document.getElementById('seats');
-  const $seatsNum=document.getElementById('seatsNum'), $seatsSold=document.getElementById('seatsSold'), $conn=document.getElementById('conn');
-  // Display order: $49 price → $0 down BNPL
+  const $buyer=document.getElementById('buyer'), $tail=document.getElementById('tail');
+  const $conn=document.getElementById('conn');
+  // Display order: $249 price → $0 down BNPL
   const $priceFrames=[document.getElementById('priceFrame1'), document.getElementById('priceFrame2')];
   const $takeover=document.getElementById('takeover'), $toFx=document.getElementById('takeoverFx');
   const $toName=document.getElementById('toName'), $toPill=document.getElementById('toPill');
@@ -608,7 +584,7 @@
     if(!b || !$takeover) return;
     clearTimeout(takeoverTimer); clearInterval(toBurstTimer);
     $toName.textContent = cap(b.name);
-    $toPill.textContent = '$49 LIFETIME';            // no founder number — founders are closed
+    $toPill.textContent = '$249 LIFETIME';            // no founder number — founders are closed
     // restart entry animation
     $takeover.classList.remove('out','show'); void $takeover.offsetWidth;
     $takeover.setAttribute('aria-hidden','false');
@@ -654,7 +630,7 @@
       <div class="buyer-av">${initial(b.name)}</div>
       <div class="buyer-txt">
         <div class="buyer-name">${cap(b.name)}</div>
-        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">$49 LIFETIME</span></div>
+        <div class="buyer-meta"><span class="buyer-tag">JUST JOINED</span><span class="buyer-pos">$249 LIFETIME</span></div>
       </div>`;
     if(animate) $buyer.classList.add('enter');
   }
@@ -663,13 +639,6 @@
     $tail.innerHTML=`<div class="tail-hdr">JUST JOINED</div>`+rest.map(b=>`
       <div class="tail-row"><div class="tail-av">${initial(b.name)}</div><div class="tail-name">${cap(b.name)}</div></div>`).join('');
   }
-  // HERO = sales today (a number that climbs). Rolls up on each new sale.
-  function renderSold(animate){
-    const v=String(Math.max(0,soldToday));
-    if($seatsNum.textContent!==v){ $seatsNum.textContent=v;
-      if(animate){ $seatsNum.classList.remove('roll'); void $seatsNum.offsetWidth; $seatsNum.classList.add('roll'); } }
-  }
-
   // confetti
   const ctx=$confetti.getContext('2d'); let cw=0,ch=0;
   function resizeConfetti(){ cw=$frame.clientWidth; ch=$frame.clientHeight; const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -697,10 +666,11 @@
     buyers=[{name:entry.name,position:entry.position},...buyers.filter(b=>b.name!==entry.name)].slice(0,1+TAIL_MAX);
     const go=animate&&!first; renderBuyer(buyers[0],go); renderTail(); if(go){ burst(); fireTakeover(buyers[0]); }
   }
-  // Seats-left is no longer shown (we sell $49, no daily cap). We still accept
-  // spotsRemaining off the wire but don't render it — the hero is sales-today.
+  // We no longer render a seats/sales counter — the hero is the live joiner feed.
+  // We still accept spotsRemaining + soldToday off the wire (kept for the money-rain
+  // accent on a sale) but never paint a number.
   function applySpots(r){ if(typeof r!=='number') return; spots=r; }
-  function applySold(n){ if(typeof n!=='number'||n===soldToday) return; prevSold=soldToday; soldToday=n; renderSold(true);
+  function applySold(n){ if(typeof n!=='number'||n===soldToday) return; prevSold=soldToday; soldToday=n;
     if(n>prevSold&&prevSold!==0) spawnMoney(8); else if(n>prevSold) spawnMoney(5); }
 
   function markConn(s){ if(s==='offline'){ $conn.textContent='● offline'; $conn.classList.add('offline'); } else { $conn.textContent=''; $conn.classList.remove('offline'); } }
@@ -729,7 +699,7 @@
 
   resizeConfetti();
   window.addEventListener('resize',resizeConfetti,{passive:true});
-  renderSold(false); poll(); setInterval(poll,POLL_MS); openSSE();
+  poll(); setInterval(poll,POLL_MS); openSSE();
   // Start price rotation unless the viewer prefers reduced motion.
   if(!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches){
     setInterval(rotatePrice, PRICE_ROTATE_MS);
