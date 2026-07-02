@@ -35,6 +35,7 @@
    * ============================================================ */
   :root {
     --lime: #D6F224;
+    --lime-soft: #DFF584;
     --ink: #13150E;
     --cream: #FAFBF7;
   }
@@ -135,6 +136,14 @@
   .pill-dot { width:7px; height:7px; border-radius:50%; background: var(--lime); box-shadow:0 0 7px rgba(214,242,36,0.9); }
   .pill b { color: var(--lime); }
 
+  .spark {
+    margin-top: 2px;
+    font-size:16px; font-weight:700; letter-spacing:-0.01em;
+    color: var(--lime-soft, #DFF584);
+    text-shadow: 0 1px 10px rgba(0,0,0,0.5);
+    text-align:center; max-width: 84vw;
+  }
+
   .confetti { position:fixed; inset:0; pointer-events:none; z-index:3; }
 
   @media (prefers-reduced-motion: reduce) {
@@ -172,17 +181,42 @@
       <div class="eyebrow">Just joined Neo</div>
       <div class="name" id="popName">Jordan</div>
       <div class="pill"><span class="pill-dot"></span>Creator <b id="popCount">148</b> is in</div>
+      <div class="spark" id="popSpark">Bet on themselves today</div>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const $pop = document.getElementById('pop'), $popName = document.getElementById('popName'), $popCount = document.getElementById('popCount');
+  const $pop = document.getElementById('pop'), $popName = document.getElementById('popName'), $popCount = document.getElementById('popCount'), $popSpark = document.getElementById('popSpark');
   const $confetti = document.getElementById('confetti');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const cap = s => !s ? '' : s[0].toUpperCase() + s.slice(1).toLowerCase();
+
+  // rotating aspirational lines — one per buyer, never the same twice in a row
+  const SPARK_LINES = [
+    'Bet on themselves today',
+    'Chose growth over comfort',
+    'Just leveled up',
+    'Started the version 2.0 arc',
+    'Invested in their next chapter',
+    'Stopped waiting, started building',
+    'Took the leap',
+    'Playing the long game now',
+    'Upgraded their future self',
+    'Here for the transformation',
+    'Doing the work now',
+    'Building something real',
+  ];
+  let lastSpark = -1;
+  function nextSpark() {
+    if (SPARK_LINES.length <= 1) return SPARK_LINES[0] || '';
+    let i;
+    do { i = (Math.random() * SPARK_LINES.length) | 0; } while (i === lastSpark);
+    lastSpark = i;
+    return SPARK_LINES[i];
+  }
 
   let queue = [], showing = false;
   function enqueue(name, total) {
@@ -200,6 +234,7 @@
   function play(name, total) {
     $popName.textContent = cap(name);
     $popCount.textContent = String(total || '');
+    $popSpark.textContent = nextSpark();
     $pop.classList.remove('show'); void $pop.offsetWidth;
     $pop.classList.add('show');
     burst();
