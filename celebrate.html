@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Restackd Neo — Center Celebration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ============================================================
+   * RESTACKD NEO — Center Celebration (OBS Source 2 of 2)
+   * Fully transparent, invisible canvas — pairs with badge.html
+   * (Source 1), which owns the corner counter + polls the API.
+   * This source is a pure LISTENER: it never calls the API itself.
+   * It hears sales via BroadcastChannel('neo-overlay') from
+   * badge.html, so opening this source alone (without badge.html
+   * open in the same OBS session) will never fire anything — both
+   * sources must be added for the celebration to work.
+   *
+   * On a sale: Neo's mascot scales in at dead-center with a soft
+   * halo + radiating rings, the buyer's name types in under it,
+   * holds ~3.5s, then fades. Drag/resize this source anywhere in
+   * OBS — the canvas itself is 1080x1920 but everything is drawn
+   * around the true center, so resizing the source scales the
+   * whole celebration proportionally.
+   * ============================================================ */
+  :root {
+    --lime: #D6F224;
+    --ink: #13150E;
+    --cream: #FAFBF7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
+  html,body { background:transparent; overflow:hidden; width:100%; height:100%; }
+  body { font-family:'Inter',system-ui,-apple-system,sans-serif; position:relative; }
+
+  .stage {
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+
+  .pop {
+    position:relative;
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    opacity:0; transform:scale(0.4);
+    pointer-events:none;
+  }
+  .pop.show { animation: pop-in 0.65s cubic-bezier(0.16,1,0.3,1) forwards, pop-out 0.5s ease-in 3.1s forwards; }
+  @keyframes pop-in {
+    0% { opacity:0; transform:scale(0.35) translateY(10px); }
+    60% { opacity:1; transform:scale(1.08) translateY(0); }
+    100% { opacity:1; transform:scale(1) translateY(0); }
+  }
+  @keyframes pop-out {
+    0% { opacity:1; transform:scale(1); }
+    100% { opacity:0; transform:scale(0.85) translateY(-8px); }
+  }
+
+  /* radiating rings behind the mascot */
+  .ring {
+    position:absolute; left:50%; top:64px; /* aligns to mascot center */
+    width:150px; height:150px; margin:-75px 0 0 -75px;
+    border-radius:50%; border:2px solid rgba(214,242,36,0.5);
+    opacity:0;
+  }
+  .pop.show .ring { animation: ring-out 1.6s ease-out 0.15s; }
+  .pop.show .ring.r2 { animation-delay: 0.35s; }
+  .pop.show .ring.r3 { animation-delay: 0.55s; }
+  @keyframes ring-out {
+    0% { transform:scale(0.6); opacity:0.8; }
+    100% { transform:scale(2.2); opacity:0; }
+  }
+
+  .mascot-wrap {
+    position:relative; width:128px; height:128px; border-radius:34px;
+    overflow:hidden;
+    box-shadow: 0 0 0 3px rgba(214,242,36,0.55), 0 0 50px rgba(214,242,36,0.5), 0 24px 60px rgba(0,0,0,0.5);
+  }
+  .mascot-wrap img { width:100%; height:100%; object-fit:cover; display:block; transform: scale(1.06); }
+
+  .txt-col { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .eyebrow {
+    font-size:15px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase;
+    color: var(--lime); text-shadow: 0 0 14px rgba(214,242,36,0.5);
+  }
+  .name {
+    font-size:44px; font-weight:900; letter-spacing:-0.02em; line-height:1;
+    color: var(--cream);
+    text-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 0 30px rgba(214,242,36,0.25);
+    max-width: 90vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .pill {
+    margin-top: 6px;
+    display:flex; align-items:center; gap:7px;
+    padding: 8px 16px; border-radius:999px;
+    background: rgba(19,21,14,0.72); backdrop-filter: blur(6px);
+    border: 1px solid rgba(214,242,36,0.3);
+    font-size:15px; font-weight:700; color: var(--cream);
+  }
+  .pill-dot { width:7px; height:7px; border-radius:50%; background: var(--lime); box-shadow:0 0 7px rgba(214,242,36,0.9); }
+  .pill b { color: var(--lime); }
+
+  .confetti { position:fixed; inset:0; pointer-events:none; z-index:2; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pop.show { animation: pop-fade 0.4s ease forwards, pop-out 0.5s ease-in 3.1s forwards; }
+    .ring { display:none; }
+  }
+  @keyframes pop-fade { from{opacity:0;} to{opacity:1;transform:scale(1);} }
+</style>
+</head>
+<body>
+<canvas class="confetti" id="confetti"></canvas>
+<div class="stage">
+  <div class="pop" id="pop">
+    <div class="ring"></div>
+    <div class="ring r2"></div>
+    <div class="ring r3"></div>
+    <div class="mascot-wrap"><img src="assets/neo-mascot-cropped.png" alt="Neo" /></div>
+    <div class="txt-col">
+      <div class="eyebrow">Just joined Neo</div>
+      <div class="name" id="popName">Jordan</div>
+      <div class="pill"><span class="pill-dot"></span>Creator <b id="popCount">148</b> is in</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const $pop = document.getElementById('pop'), $popName = document.getElementById('popName'), $popCount = document.getElementById('popCount');
+  const $confetti = document.getElementById('confetti');
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const cap = s => !s ? '' : s[0].toUpperCase() + s.slice(1).toLowerCase();
+
+  let queue = [], showing = false;
+  function enqueue(name, total) {
+    queue.push({ name, total });
+    if (!showing) drain();
+  }
+  function drain() {
+    const next = queue.shift();
+    if (!next) { showing = false; return; }
+    showing = true;
+    play(next.name, next.total);
+    setTimeout(drain, 4200); // full pop-in + hold + pop-out cycle
+  }
+
+  function play(name, total) {
+    $popName.textContent = cap(name);
+    $popCount.textContent = String(total || '');
+    $pop.classList.remove('show'); void $pop.offsetWidth;
+    $pop.classList.add('show');
+    burst();
+  }
+
+  // ---- confetti across the whole canvas, centered on the mascot ----
+  let cw=0, ch=0, ctx=null, raf=0; const parts=[];
+  function size() {
+    cw = window.innerWidth; ch = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    $confetti.width = cw*dpr; $confetti.height = ch*dpr;
+    $confetti.style.width = cw+'px'; $confetti.style.height = ch+'px';
+    ctx = $confetti.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  function burst() {
+    if (reduceMotion) return;
+    if (cw===0) size();
+    const colors = ['#D6F224','#DFF584','#FAFBF7'];
+    const ox = cw/2, oy = ch/2 - 120;
+    for (let i=0;i<46;i++){
+      const a = Math.random()*Math.PI*2, sp = 4+Math.random()*8;
+      parts.push({ x:ox+(Math.random()*30-15), y:oy+(Math.random()*20-10), vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-3,
+        rot:Math.random()*6.28, vr:(Math.random()-0.5)*0.4, size:5+Math.random()*6,
+        color: colors[(Math.random()*colors.length)|0], life:1 });
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick() {
+    ctx.clearRect(0,0,cw,ch);
+    const g=0.35, d=0.985;
+    for (let i=parts.length-1;i>=0;i--){
+      const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.012;
+      if (p.life<=0 || p.y>ch+20) { parts.splice(i,1); continue; }
+      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.max(0,Math.min(1,p.life)); ctx.fillStyle = p.color;
+      ctx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4);
+      ctx.restore();
+    }
+    raf = parts.length>0 ? requestAnimationFrame(tick) : 0;
+  }
+
+  size();
+  window.addEventListener('resize', size, { passive:true });
+
+  // Listen for sales broadcast from badge.html (the source that owns
+  // the API poll). This source never calls the API itself.
+  try {
+    const bc = new BroadcastChannel('neo-overlay');
+    bc.addEventListener('message', ev => {
+      if (ev?.data?.type === 'sale' && ev.data.name) enqueue(ev.data.name, ev.data.total);
+    });
+  } catch {}
+
+  // ---- demo dry-run: ?demo=1 or ?demo=Name fires one test pop ----
+  try {
+    const qp = new URLSearchParams(location.search);
+    if (qp.has('demo')) {
+      const raw = qp.get('demo');
+      const demoName = (raw && raw !== '1' && raw !== 'true') ? raw : 'Jordan';
+      setTimeout(() => enqueue(demoName, 149), 1000);
+    }
+  } catch {}
+})();
+</script>
+</body>
+</html>
