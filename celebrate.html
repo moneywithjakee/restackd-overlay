@@ -24,6 +24,14 @@
    * OBS — the canvas itself is 1080x1920 but everything is drawn
    * around the true center, so resizing the source scales the
    * whole celebration proportionally.
+   *
+   * ALWAYS-ON VIGNETTE (added 2026-07-02): a thin lime border frames
+   * the whole canvas permanently, with a glowing comet trail racing
+   * continuously around the perimeter — a subtle branding frame for
+   * the entire stream, independent of sales. The center celebration
+   * (above) stays invisible until a real sale; the border+comet never
+   * turns off. Traced with SVG stroke-dashoffset (GPU-cheap, no JS
+   * per-frame — the browser handles the path interpolation natively).
    * ============================================================ */
   :root {
     --lime: #D6F224;
@@ -34,8 +42,34 @@
   html,body { background:transparent; overflow:hidden; width:100%; height:100%; }
   body { font-family:'Inter',system-ui,-apple-system,sans-serif; position:relative; }
 
+  /* ---------- ALWAYS-ON BORDER + COMET CHASER ---------- */
+  .vignette {
+    position:fixed; inset:0; z-index:1; pointer-events:none;
+  }
+  .vignette svg { width:100%; height:100%; display:block; }
+  /* static thin lime frame, low-opacity ambient glow */
+  .border-static {
+    fill:none; stroke:rgba(214,242,36,0.32); stroke-width:3;
+  }
+  /* the comet: a short bright segment + soft tail, traced via a long
+     dash pattern where only ~6% of the perimeter is "on" at once,
+     animated by shifting stroke-dashoffset around the full loop. */
+  .border-comet {
+    fill:none; stroke:url(#cometGradient); stroke-width:5;
+    stroke-linecap:round;
+    filter:drop-shadow(0 0 10px rgba(214,242,36,0.85)) drop-shadow(0 0 22px rgba(214,242,36,0.5));
+    animation: comet-run 7s linear infinite;
+  }
+  @keyframes comet-run {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -1000; } /* matches the perimeter unit scale below */
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .border-comet { animation: none; opacity: 0.6; }
+  }
+
   .stage {
-    position:fixed; inset:0;
+    position:fixed; inset:0; z-index:2;
     display:flex; align-items:center; justify-content:center;
     pointer-events:none;
   }
@@ -101,7 +135,7 @@
   .pill-dot { width:7px; height:7px; border-radius:50%; background: var(--lime); box-shadow:0 0 7px rgba(214,242,36,0.9); }
   .pill b { color: var(--lime); }
 
-  .confetti { position:fixed; inset:0; pointer-events:none; z-index:2; }
+  .confetti { position:fixed; inset:0; pointer-events:none; z-index:3; }
 
   @media (prefers-reduced-motion: reduce) {
     .pop.show { animation: pop-fade 0.4s ease forwards, pop-out 0.5s ease-in 3.1s forwards; }
@@ -111,6 +145,22 @@
 </style>
 </head>
 <body>
+<div class="vignette">
+  <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="cometGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"  stop-color="#D6F224" stop-opacity="0"/>
+        <stop offset="55%" stop-color="#D6F224" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="#F4FFB8" stop-opacity="1"/>
+      </linearGradient>
+    </defs>
+    <!-- pathLength=1000 normalizes the perimeter to 1000 units regardless of
+         actual pixel size, so the dash math below is resolution-independent -->
+    <rect class="border-static" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000"/>
+    <rect class="border-comet" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000"
+          stroke-dasharray="60 940"/>
+  </svg>
+</div>
 <canvas class="confetti" id="confetti"></canvas>
 <div class="stage">
   <div class="pop" id="pop">
