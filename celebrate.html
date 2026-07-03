@@ -6,6 +6,8 @@
 <title>Restackd Neo — Center Celebration</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap">
+<link rel="preload" as="image" href="assets/neo-mascot-cropped.png">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
@@ -18,20 +20,44 @@
    * open in the same OBS session) will never fire anything — both
    * sources must be added for the celebration to work.
    *
-   * On a sale: Neo's mascot scales in at dead-center with a soft
-   * halo + radiating rings, the buyer's name types in under it,
-   * holds ~3.5s, then fades. Drag/resize this source anywhere in
-   * OBS — the canvas itself is 1080x1920 but everything is drawn
-   * around the true center, so resizing the source scales the
-   * whole celebration proportionally.
+   * CELEBRATION CHOREOGRAPHY (staged timeline, one .show class):
+   *   t=0      impact flash-ring + confetti burst + scrim fade-in
+   *   t=60ms   mascot springs in (squash & stretch)
+   *   t=150ms  radiating rings (x3, staggered)
+   *   t=350ms  eyebrow slides up
+   *   t=450ms  name reveals via clip-path wipe (left → right)
+   *   t=650ms  count pill slides up
+   *   t=900ms  count odometer-rolls N-1 → N (250ms)
+   *   t=850ms  spark line fades up
+   *   hold ... until t≈3.9s
+   *   exit     staggered: spark 3.9 → pill 4.0 → name/eyebrow 4.1
+   *            → mascot 4.2 → scrim last, done ≈4.7s
+   * Queue drains every 5000ms (timeline 4.7s + settle buffer) so
+   * back-to-back sales never overlap.
    *
-   * ALWAYS-ON VIGNETTE (added 2026-07-02): a thin lime border frames
-   * the whole canvas permanently, with a glowing comet trail racing
-   * continuously around the perimeter — a subtle branding frame for
-   * the entire stream, independent of sales. The center celebration
-   * (above) stays invisible until a real sale; the border+comet never
-   * turns off. Traced with SVG stroke-dashoffset (GPU-cheap, no JS
-   * per-frame — the browser handles the path interpolation natively).
+   * LEGIBILITY SCRIM: a soft radial ink ellipse (~640x780) behind
+   * the content column — a cinematic vignette, not a card — so the
+   * text reads over ANY live video (bright skin tones, sunlight,
+   * busy motion) without breaking the invisible-overlay illusion.
+   *
+   * MILESTONE MODE: every 10th creator (total % 10 === 0) gets an
+   * amped variant — 2.5x confetti, bigger flash, gold-lime gradient
+   * "#N" in the pill. Disable with ?milestones=off.
+   *
+   * ALWAYS-ON VIGNETTE: thin lime border frames the canvas with a
+   * luminous comet racing the perimeter. The comet is 4 stacked
+   * rect strokes (bright short head + progressively longer, wider,
+   * fainter lime tails + one wide glow under-stroke) sharing the
+   * same pathLength=1000 normalization and the same comet-run
+   * dashoffset animation — each layer phase-shifted via a negative
+   * animation-delay so the tail genuinely trails the head on all
+   * four edges. Zero SVG filters, zero gradients: solid strokes
+   * only, so OBS CEF never re-rasterizes a filter per frame.
+   *
+   * PERF RULES (OBS CEF renders this at stream framerate):
+   * animate transform/opacity only (clip-path once, on the name
+   * reveal); no backdrop-filter anywhere; no animated filters or
+   * shadows — all glows are pre-baked static shadows.
    * ============================================================ */
   :root {
     --lime: #D6F224;
@@ -52,21 +78,25 @@
   .border-static {
     fill:none; stroke:rgba(214,242,36,0.32); stroke-width:3;
   }
-  /* the comet: a short bright segment + soft tail, traced via a long
-     dash pattern where only ~6% of the perimeter is "on" at once,
-     animated by shifting stroke-dashoffset around the full loop. */
-  .border-comet {
-    fill:none; stroke:url(#cometGradient); stroke-width:5;
-    stroke-linecap:round;
-    filter:drop-shadow(0 0 10px rgba(214,242,36,0.85)) drop-shadow(0 0 22px rgba(214,242,36,0.5));
+  /* Comet = 4 stacked strokes, same geometry + pathLength=1000 +
+     same comet-run animation. Dash lengths grow and opacities fall
+     from head to tail; negative delays phase-shift each layer so
+     every tail END lines up just behind the head (delay of -X ms
+     shifts a layer X/7000 of the loop forward; head is shifted the
+     furthest forward, glow not at all, so the stack reads
+     glow → tail2 → tail1 → head along the travel direction). */
+  .comet {
+    fill:none; stroke-linecap:round;
     animation: comet-run 7s linear infinite;
+    will-change: transform;
   }
+  .comet-glow { stroke:#D6F224; stroke-opacity:0.13; stroke-width:14; }                          /* dash 110u, delay 0     → [0..110]  */
+  .comet-t2   { stroke:#D6F224; stroke-opacity:0.26; stroke-width:8.5; animation-delay:-0.035s; } /* dash 95u,  shift 5u   → [5..100]  */
+  .comet-t1   { stroke:#D6F224; stroke-opacity:0.55; stroke-width:6;   animation-delay:-0.315s; } /* dash 55u,  shift 45u  → [45..100] */
+  .comet-head { stroke:#F4FFB8; stroke-opacity:1;    stroke-width:4;   animation-delay:-0.518s; } /* dash 26u,  shift 74u  → [74..100] */
   @keyframes comet-run {
     from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: -1000; } /* matches the perimeter unit scale below */
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .border-comet { animation: none; opacity: 0.6; }
+    to   { stroke-dashoffset: -1000; } /* matches pathLength below */
   }
 
   .stage {
@@ -74,22 +104,51 @@
     display:flex; align-items:center; justify-content:center;
     pointer-events:none;
   }
+  .celebration { position:relative; pointer-events:none; }
+
+  /* ---------- C1: legibility scrim (cinematic vignette, no edges) ---------- */
+  .scrim {
+    position:absolute; left:50%; top:50%;
+    width:640px; height:780px;
+    transform:translate(-50%,-50%);
+    background: radial-gradient(closest-side,
+      rgba(19,21,14,0.60) 0%,
+      rgba(19,21,14,0.50) 34%,
+      rgba(19,21,14,0.30) 58%,
+      rgba(19,21,14,0.12) 80%,
+      rgba(19,21,14,0)    100%);
+    opacity:0;
+  }
+  .celebration.show .scrim {
+    animation: scrim-in 0.25s ease-out both,
+               scrim-out 0.4s ease-in 4.3s forwards;
+  }
+  @keyframes scrim-in  { from { opacity:0; } to { opacity:1; } }
+  @keyframes scrim-out { from { opacity:1; } to { opacity:0; } }
 
   .pop {
     position:relative;
     display:flex; flex-direction:column; align-items:center; gap:14px;
-    opacity:0; transform:scale(0.4);
     pointer-events:none;
   }
-  .pop.show { animation: pop-in 0.65s cubic-bezier(0.16,1,0.3,1) forwards, pop-out 0.5s ease-in 3.1s forwards; }
-  @keyframes pop-in {
-    0% { opacity:0; transform:scale(0.35) translateY(10px); }
-    60% { opacity:1; transform:scale(1.08) translateY(0); }
-    100% { opacity:1; transform:scale(1) translateY(0); }
+
+  /* ---------- C5: impact flash-ring (t=0, one element) ---------- */
+  .flash {
+    position:absolute; left:50%; top:64px; /* mascot center anchor */
+    width:200px; height:200px; margin:-100px 0 0 -100px;
+    border-radius:50%; border:4px solid var(--lime);
+    box-shadow: 0 0 26px rgba(214,242,36,0.75), inset 0 0 20px rgba(214,242,36,0.45);
+    opacity:0;
   }
-  @keyframes pop-out {
-    0% { opacity:1; transform:scale(1); }
-    100% { opacity:0; transform:scale(0.85) translateY(-8px); }
+  .celebration.show .flash { animation: flash-out 0.2s cubic-bezier(0.16,0.84,0.44,1) both; }
+  .celebration.milestone.show .flash { animation: flash-out-big 0.28s cubic-bezier(0.16,0.84,0.44,1) both; }
+  @keyframes flash-out {
+    0%   { opacity:0.9; transform:scale(0.4); }
+    100% { opacity:0;   transform:scale(2); }
+  }
+  @keyframes flash-out-big {
+    0%   { opacity:0.95; transform:scale(0.5); }
+    100% { opacity:0;    transform:scale(2.9); }
   }
 
   /* radiating rings behind the mascot */
@@ -99,100 +158,187 @@
     border-radius:50%; border:2px solid rgba(214,242,36,0.5);
     opacity:0;
   }
-  .pop.show .ring { animation: ring-out 1.6s ease-out 0.15s; }
-  .pop.show .ring.r2 { animation-delay: 0.35s; }
-  .pop.show .ring.r3 { animation-delay: 0.55s; }
+  .celebration.show .ring    { animation: ring-out 1.5s ease-out 0.15s; }
+  .celebration.show .ring.r2 { animation-delay: 0.32s; }
+  .celebration.show .ring.r3 { animation-delay: 0.5s; }
   @keyframes ring-out {
-    0% { transform:scale(0.6); opacity:0.8; }
+    0%   { transform:scale(0.6); opacity:0.8; }
     100% { transform:scale(2.2); opacity:0; }
   }
 
+  /* ---------- C4: staged entrance/exit choreography ---------- */
   .mascot-wrap {
     position:relative; width:128px; height:128px; border-radius:34px;
-    overflow:hidden;
+    overflow:hidden; opacity:0;
     box-shadow: 0 0 0 3px rgba(214,242,36,0.55), 0 0 50px rgba(214,242,36,0.5), 0 24px 60px rgba(0,0,0,0.5);
   }
   .mascot-wrap img { width:100%; height:100%; object-fit:cover; display:block; transform: scale(1.06); }
+  .celebration.show .mascot-wrap {
+    animation: mascot-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.06s both,
+               el-out 0.35s ease-in 4.2s forwards;
+  }
+  @keyframes mascot-in { /* squash & stretch spring */
+    0%   { opacity:0; transform:scale3d(0.3,0.3,1); }
+    45%  { opacity:1; transform:scale3d(1.02,1.1,1); }
+    70%  { transform:scale3d(1.07,0.97,1); }
+    100% { opacity:1; transform:scale3d(1,1,1); }
+  }
 
   .txt-col { display:flex; flex-direction:column; align-items:center; gap:4px; }
   .eyebrow {
     font-size:15px; font-weight:800; letter-spacing:0.18em; text-transform:uppercase;
-    color: var(--lime); text-shadow: 0 0 14px rgba(214,242,36,0.5);
+    color: var(--lime); opacity:0;
+    text-shadow: 0 1px 2px rgba(19,21,14,0.85), 0 2px 12px rgba(19,21,14,0.55), 0 0 14px rgba(214,242,36,0.35);
+  }
+  .celebration.show .eyebrow {
+    animation: el-in-up 0.22s ease-out 0.35s both,
+               el-out 0.3s ease-in 4.1s forwards;
   }
   .name {
     font-size:44px; font-weight:900; letter-spacing:-0.02em; line-height:1;
-    color: var(--cream);
-    text-shadow: 0 2px 20px rgba(0,0,0,0.6), 0 0 30px rgba(214,242,36,0.25);
+    color: var(--cream); opacity:0;
+    text-shadow: 0 1px 3px rgba(19,21,14,0.7), 0 2px 20px rgba(0,0,0,0.6), 0 0 30px rgba(214,242,36,0.25);
     max-width: 90vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding: 2px 10px; /* breathing room so the wipe never shaves glyph edges */
   }
+  .celebration.show .name {
+    animation: name-in 0.4s cubic-bezier(0.3,0.7,0.2,1) 0.45s both,
+               el-out 0.3s ease-in 4.1s forwards;
+  }
+  @keyframes name-in { /* left → right inset wipe, robust for any length */
+    0%   { opacity:1; clip-path: inset(-25% 115% -25% -8%); }
+    100% { opacity:1; clip-path: inset(-25% -8%  -25% -8%); }
+  }
+
   .pill {
     margin-top: 6px;
     display:flex; align-items:center; gap:7px;
     padding: 8px 16px; border-radius:999px;
-    background: rgba(19,21,14,0.72); backdrop-filter: blur(6px);
+    background: rgba(19,21,14,0.85); /* solid plate — backdrop-filter does nothing over OBS video and costs GPU */
     border: 1px solid rgba(214,242,36,0.3);
     font-size:15px; font-weight:700; color: var(--cream);
+    opacity:0;
+  }
+  .celebration.show .pill {
+    animation: el-in-up 0.32s cubic-bezier(0.22,1,0.36,1) 0.65s both,
+               el-out 0.3s ease-in 4s forwards;
   }
   .pill-dot { width:7px; height:7px; border-radius:50%; background: var(--lime); box-shadow:0 0 7px rgba(214,242,36,0.9); }
   .pill b { color: var(--lime); }
 
+  /* count odometer: masked track holds N-1 above N; .tick rolls it up */
+  #popCount { display:inline-flex; align-items:center; }
+  .count-hash { display:none; }
+  .count-mask { display:block; height:1.15em; overflow:hidden; }
+  .count-track { display:block; transform:translateY(0); }
+  .count-track span { display:block; height:1.15em; line-height:1.15; }
+  .count-track.tick { animation: count-roll 0.25s cubic-bezier(0.25,0.9,0.3,1) forwards; }
+  @keyframes count-roll { to { transform: translateY(-1.15em); } }
+
+  /* ---------- C7: milestone (every 10th creator) ---------- */
+  .celebration.milestone .pill { border-color: rgba(214,242,36,0.55); }
+  .celebration.milestone #popCount { font-size:18px; }
+  .celebration.milestone .count-hash { display:block; height:1.15em; line-height:1.15; margin-right:1px; }
+  .celebration.milestone .count-hash,
+  .celebration.milestone .count-track span {
+    background: linear-gradient(135deg, #F7F9C8 0%, #D6F224 45%, #EDD35A 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent; color: transparent;
+  }
+
   .spark {
     margin-top: 2px;
     font-size:16px; font-weight:700; letter-spacing:-0.01em;
-    color: var(--lime-soft, #DFF584);
-    text-shadow: 0 1px 10px rgba(0,0,0,0.5);
+    color: var(--lime-soft, #DFF584); opacity:0;
+    text-shadow: 0 1px 2px rgba(19,21,14,0.75), 0 2px 12px rgba(19,21,14,0.5);
     text-align:center; max-width: 84vw;
+  }
+  .celebration.show .spark {
+    animation: el-in-up 0.3s ease-out 0.85s both,
+               el-out 0.3s ease-in 3.9s forwards;
+  }
+
+  /* shared entrance/exit primitives */
+  @keyframes el-in-up {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  @keyframes el-out {
+    from { opacity:1; transform:translateY(0); }
+    to   { opacity:0; transform:translateY(-14px); }
   }
 
   .confetti { position:fixed; inset:0; pointer-events:none; z-index:3; }
 
+  /* ---------- reduced motion: simple fades only ---------- */
   @media (prefers-reduced-motion: reduce) {
-    .pop.show { animation: pop-fade 0.4s ease forwards, pop-out 0.5s ease-in 3.1s forwards; }
-    .ring { display:none; }
+    .comet { animation:none; }
+    .comet-glow, .comet-t2, .comet-t1 { stroke-opacity:0.2; }
+    .comet-head { stroke-opacity:0.6; }
+    .ring, .flash { display:none; }
+    .celebration.show .scrim {
+      animation: rm-in 0.3s ease both, rm-out 0.4s ease 4.3s forwards;
+    }
+    .celebration.show .mascot-wrap,
+    .celebration.show .eyebrow,
+    .celebration.show .name,
+    .celebration.show .pill,
+    .celebration.show .spark {
+      animation: rm-in 0.35s ease both, rm-out 0.4s ease 4.1s forwards;
+      clip-path:none;
+    }
+    .count-track.tick { animation:none; }
   }
-  @keyframes pop-fade { from{opacity:0;} to{opacity:1;transform:scale(1);} }
+  @keyframes rm-in  { from { opacity:0; } to { opacity:1; } }
+  @keyframes rm-out { from { opacity:1; } to { opacity:0; } }
 </style>
 </head>
 <body>
 <div class="vignette">
   <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="cometGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-        <stop offset="0%"  stop-color="#D6F224" stop-opacity="0"/>
-        <stop offset="55%" stop-color="#D6F224" stop-opacity="0.55"/>
-        <stop offset="100%" stop-color="#F4FFB8" stop-opacity="1"/>
-      </linearGradient>
-    </defs>
     <!-- pathLength=1000 normalizes the perimeter to 1000 units regardless of
-         actual pixel size, so the dash math below is resolution-independent -->
+         actual pixel size, so the dash math is resolution-independent -->
     <rect class="border-static" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000"/>
-    <rect class="border-comet" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000"
-          stroke-dasharray="60 940"/>
+    <g class="comet-g">
+      <rect class="comet comet-glow" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="110 890"/>
+      <rect class="comet comet-t2"   x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="95 905"/>
+      <rect class="comet comet-t1"   x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="55 945"/>
+      <rect class="comet comet-head" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="26 974"/>
+    </g>
   </svg>
 </div>
 <canvas class="confetti" id="confetti"></canvas>
 <div class="stage">
-  <div class="pop" id="pop">
-    <div class="ring"></div>
-    <div class="ring r2"></div>
-    <div class="ring r3"></div>
-    <div class="mascot-wrap"><img src="assets/neo-mascot-cropped.png" alt="Neo" /></div>
-    <div class="txt-col">
-      <div class="eyebrow">Just joined Neo</div>
-      <div class="name" id="popName">Jordan</div>
-      <div class="pill"><span class="pill-dot"></span>Creator <b id="popCount">148</b> is in</div>
-      <div class="spark" id="popSpark">Bet on themselves today</div>
+  <div class="celebration" id="celebration">
+    <div class="scrim"></div>
+    <div class="pop" id="pop">
+      <div class="flash"></div>
+      <div class="ring"></div>
+      <div class="ring r2"></div>
+      <div class="ring r3"></div>
+      <div class="mascot-wrap"><img src="assets/neo-mascot-cropped.png" alt="Neo" /></div>
+      <div class="txt-col">
+        <div class="eyebrow">Just joined Neo</div>
+        <div class="name" id="popName">Jordan</div>
+        <div class="pill"><span class="pill-dot"></span>Creator <b id="popCount"><span class="count-hash">#</span><span class="count-mask"><span class="count-track" id="countTrack"><span id="countOld">148</span><span id="countNew">149</span></span></span></b> is in</div>
+        <div class="spark" id="popSpark">Bet on themselves today</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
 (() => {
-  const $pop = document.getElementById('pop'), $popName = document.getElementById('popName'), $popCount = document.getElementById('popCount'), $popSpark = document.getElementById('popSpark');
+  const $cel = document.getElementById('celebration');
+  const $popName = document.getElementById('popName'), $popSpark = document.getElementById('popSpark');
+  const $countTrack = document.getElementById('countTrack'), $countOld = document.getElementById('countOld'), $countNew = document.getElementById('countNew');
   const $confetti = document.getElementById('confetti');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const cap = s => !s ? '' : s[0].toUpperCase() + s.slice(1).toLowerCase();
+  let milestonesOn = true;
+  try { milestonesOn = new URLSearchParams(location.search).get('milestones') !== 'off'; } catch {}
+
+  const cap = s => !s ? '' : s.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
 
   // rotating aspirational lines — one per buyer, never the same twice in a row
   const SPARK_LINES = [
@@ -228,16 +374,36 @@
     if (!next) { showing = false; return; }
     showing = true;
     play(next.name, next.total);
-    setTimeout(drain, 4200); // full pop-in + hold + pop-out cycle
+    setTimeout(drain, 5000); // staged timeline ends ≈4.7s + settle buffer
   }
 
+  let tickTimer = 0;
   function play(name, total) {
     $popName.textContent = cap(name);
-    $popCount.textContent = String(total || '');
     $popSpark.textContent = nextSpark();
-    $pop.classList.remove('show'); void $pop.offsetWidth;
-    $pop.classList.add('show');
-    burst();
+
+    const n = Number(total);
+    const hasTotal = Number.isFinite(n) && n > 0;
+    const isMilestone = hasTotal && milestonesOn && n % 10 === 0;
+
+    // count odometer: render N-1, roll to N at t≈900ms (mid-hold)
+    clearTimeout(tickTimer);
+    $countTrack.classList.remove('tick');
+    if (hasTotal) {
+      if (reduceMotion) {
+        $countOld.textContent = String(n); $countNew.textContent = String(n);
+      } else {
+        $countOld.textContent = String(n - 1); $countNew.textContent = String(n);
+        tickTimer = setTimeout(() => $countTrack.classList.add('tick'), 900);
+      }
+    } else {
+      $countOld.textContent = ''; $countNew.textContent = '';
+    }
+
+    $cel.classList.toggle('milestone', isMilestone);
+    $cel.classList.remove('show'); void $cel.offsetWidth;
+    $cel.classList.add('show');
+    burst(isMilestone ? 2.5 : 1);
   }
 
   // ---- confetti across the whole canvas, centered on the mascot ----
@@ -249,15 +415,21 @@
     $confetti.style.width = cw+'px'; $confetti.style.height = ch+'px';
     ctx = $confetti.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
   }
-  function burst() {
+  function burst(mult = 1) {
     if (reduceMotion) return;
     if (cw===0) size();
-    const colors = ['#D6F224','#DFF584','#FAFBF7'];
+    const colors = ['#D6F224','#DFF584','#FAFBF7','#F4FFB8'];
     const ox = cw/2, oy = ch/2 - 120;
-    for (let i=0;i<46;i++){
-      const a = Math.random()*Math.PI*2, sp = 4+Math.random()*8;
-      parts.push({ x:ox+(Math.random()*30-15), y:oy+(Math.random()*20-10), vx:Math.cos(a)*sp, vy:Math.sin(a)*sp-3,
-        rot:Math.random()*6.28, vr:(Math.random()-0.5)*0.4, size:5+Math.random()*6,
+    const count = Math.round(55 * mult);
+    for (let i=0;i<count;i++){
+      const a = Math.random()*Math.PI*2;
+      const sz = 3.5 + Math.random()*9;               // aggressive size variance
+      const depth = 0.5 + ((sz - 3.5) / 9) * 0.9;     // bigger = closer = faster
+      const sp = (3.5 + Math.random()*7.5) * depth;
+      parts.push({ x:ox+(Math.random()*36-18), y:oy+(Math.random()*24-12),
+        vx:Math.cos(a)*sp, vy:Math.sin(a)*sp - 3.2*depth,
+        rot:Math.random()*6.28, vr:(Math.random()-0.5)*0.42, size:sz,
+        dot: Math.random() < 0.3,
         color: colors[(Math.random()*colors.length)|0], life:1 });
     }
     if (!raf) raf = requestAnimationFrame(tick);
@@ -268,9 +440,18 @@
     for (let i=parts.length-1;i>=0;i--){
       const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.012;
       if (p.life<=0 || p.y>ch+20) { parts.splice(i,1); continue; }
+      const alpha = Math.max(0,Math.min(1,p.life));
       ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
-      ctx.globalAlpha = Math.max(0,Math.min(1,p.life)); ctx.fillStyle = p.color;
-      ctx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4);
+      ctx.fillStyle = p.color;
+      if (p.dot) { // round glow dot: soft halo + bright core, no shadowBlur
+        ctx.globalAlpha = alpha*0.28;
+        ctx.beginPath(); ctx.arc(0,0,p.size*0.85,0,6.2832); ctx.fill();
+        ctx.globalAlpha = alpha;
+        ctx.beginPath(); ctx.arc(0,0,p.size*0.38,0,6.2832); ctx.fill();
+      } else {
+        ctx.globalAlpha = alpha;
+        ctx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4);
+      }
       ctx.restore();
     }
     raf = parts.length>0 ? requestAnimationFrame(tick) : 0;
@@ -289,12 +470,20 @@
   } catch {}
 
   // ---- demo dry-run: ?demo=1 or ?demo=Name fires one test pop ----
+  // ---- QA loop: ?demo=1&loop=1 re-fires every 6.5s, rotating fake
+  //      names + incrementing count (first loop lands on #150 —
+  //      handy for eyeballing milestone mode) ----
   try {
     const qp = new URLSearchParams(location.search);
     if (qp.has('demo')) {
       const raw = qp.get('demo');
       const demoName = (raw && raw !== '1' && raw !== 'true') ? raw : 'Jordan';
       setTimeout(() => enqueue(demoName, 149), 1000);
+      if (qp.has('loop')) {
+        const FAKE_NAMES = ['Maya','Chris','Alexis','Sam','Riley','Jordan','Taylor','Devon'];
+        let loopTotal = 149, li = 0;
+        setInterval(() => enqueue(FAKE_NAMES[li++ % FAKE_NAMES.length], ++loopTotal), 6500);
+      }
     }
   } catch {}
 })();
