@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Restackd Neo — Center Celebration</title>
+<title>Restackd Neo — Purchase Alert</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap">
@@ -11,48 +11,45 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style>
   /* ============================================================
-   * RESTACKD NEO — Center Celebration (OBS Source 2 of 2)
-   * Fully transparent, invisible canvas — pairs with badge.html
-   * (Source 1), which owns the corner counter + polls the API.
-   * This source is a pure LISTENER: it never calls the API itself.
-   * It hears sales via BroadcastChannel('neo-overlay') from
-   * badge.html, so opening this source alone (without badge.html
-   * open in the same OBS session) will never fire anything — both
-   * sources must be added for the celebration to work.
+   * RESTACKD NEO — Purchase Alert (OBS Source 2 of 2)
+   * A compact, invisible-until-triggered Twitch-style alert box —
+   * NOT a full 9:16 canvas. Size the OBS Browser Source to roughly
+   * 560x360 and position it wherever you want the alert to appear;
+   * everything below is drawn centered inside whatever box OBS
+   * gives it. Pairs with badge.html (Source 1), which owns the
+   * corner counter + polls the API. This source is a pure
+   * LISTENER: it never calls the API itself. It hears sales via
+   * BroadcastChannel('neo-overlay') from badge.html, so opening
+   * this source alone (without badge.html open in the same OBS
+   * session) will never fire anything — both sources must be added.
    *
-   * CELEBRATION CHOREOGRAPHY (staged timeline, one .show class):
-   *   t=0      impact flash-ring + confetti burst + scrim fade-in
-   *   t=60ms   mascot springs in (squash & stretch)
-   *   t=150ms  radiating rings (x3, staggered)
-   *   t=350ms  eyebrow slides up
-   *   t=450ms  name reveals via clip-path wipe (left → right)
-   *   t=650ms  count pill slides up
-   *   t=900ms  count odometer-rolls N-1 → N (250ms)
-   *   t=850ms  spark line fades up
-   *   hold ... until t≈3.9s
-   *   exit     staggered: spark 3.9 → pill 4.0 → name/eyebrow 4.1
-   *            → mascot 4.2 → scrim last, done ≈4.7s
-   * Queue drains every 5000ms (timeline 4.7s + settle buffer) so
-   * back-to-back sales never overlap.
+   * CELEBRATION CHOREOGRAPHY (staged timeline, one .show class),
+   * held for a full 30s so buyers actually get recognized on
+   * screen, with two extra mid-hold beats so it doesn't go dead:
+   *   t=0       impact flash-ring + confetti burst + scrim fade-in
+   *   t=60ms    mascot springs in (squash & stretch)
+   *   t=150ms   radiating rings (x3, staggered)
+   *   t=350ms   eyebrow slides up
+   *   t=450ms   name reveals via clip-path wipe (left → right)
+   *   t=650ms   count pill slides up
+   *   t=900ms   count odometer-rolls N-1 → N (250ms)
+   *   t=850ms   spark line #1 fades up
+   *   t=2s      mascot settles into a slow ambient idle-bob (loops)
+   *   t≈10s     secondary confetti pulse (~40% size) — "still going"
+   *   t≈20s     spark line cross-fades to a second rotating line
+   *   hold ... until t≈29s
+   *   exit      staggered fade-down, done ≈30s
+   * Queue drains every 30500ms (30s hold + settle buffer) so
+   * back-to-back sales never overlap — every buyer gets their
+   * FULL 30s moment, queued in order, even during a sales burst.
    *
-   * LEGIBILITY SCRIM: a soft radial ink ellipse (~640x780) behind
-   * the content column — a cinematic vignette, not a card — so the
-   * text reads over ANY live video (bright skin tones, sunlight,
-   * busy motion) without breaking the invisible-overlay illusion.
+   * LEGIBILITY SCRIM: a soft radial ink ellipse behind the content
+   * column — a cinematic vignette, not a card — so text reads over
+   * ANY live video without breaking the invisible-overlay illusion.
    *
    * MILESTONE MODE: every 10th creator (total % 10 === 0) gets an
    * amped variant — 2.5x confetti, bigger flash, gold-lime gradient
    * "#N" in the pill. Disable with ?milestones=off.
-   *
-   * ALWAYS-ON VIGNETTE: thin lime border frames the canvas with a
-   * luminous comet racing the perimeter. The comet is 4 stacked
-   * rect strokes (bright short head + progressively longer, wider,
-   * fainter lime tails + one wide glow under-stroke) sharing the
-   * same pathLength=1000 normalization and the same comet-run
-   * dashoffset animation — each layer phase-shifted via a negative
-   * animation-delay so the tail genuinely trails the head on all
-   * four edges. Zero SVG filters, zero gradients: solid strokes
-   * only, so OBS CEF never re-rasterizes a filter per frame.
    *
    * PERF RULES (OBS CEF renders this at stream framerate):
    * animate transform/opacity only (clip-path once, on the name
@@ -69,36 +66,6 @@
   html,body { background:transparent; overflow:hidden; width:100%; height:100%; }
   body { font-family:'Inter',system-ui,-apple-system,sans-serif; position:relative; }
 
-  /* ---------- ALWAYS-ON BORDER + COMET CHASER ---------- */
-  .vignette {
-    position:fixed; inset:0; z-index:1; pointer-events:none;
-  }
-  .vignette svg { width:100%; height:100%; display:block; }
-  /* static thin lime frame, low-opacity ambient glow */
-  .border-static {
-    fill:none; stroke:rgba(214,242,36,0.32); stroke-width:3;
-  }
-  /* Comet = 4 stacked strokes, same geometry + pathLength=1000 +
-     same comet-run animation. Dash lengths grow and opacities fall
-     from head to tail; negative delays phase-shift each layer so
-     every tail END lines up just behind the head (delay of -X ms
-     shifts a layer X/7000 of the loop forward; head is shifted the
-     furthest forward, glow not at all, so the stack reads
-     glow → tail2 → tail1 → head along the travel direction). */
-  .comet {
-    fill:none; stroke-linecap:round;
-    animation: comet-run 7s linear infinite;
-    will-change: transform;
-  }
-  .comet-glow { stroke:#D6F224; stroke-opacity:0.13; stroke-width:14; }                          /* dash 110u, delay 0     → [0..110]  */
-  .comet-t2   { stroke:#D6F224; stroke-opacity:0.26; stroke-width:8.5; animation-delay:-0.035s; } /* dash 95u,  shift 5u   → [5..100]  */
-  .comet-t1   { stroke:#D6F224; stroke-opacity:0.55; stroke-width:6;   animation-delay:-0.315s; } /* dash 55u,  shift 45u  → [45..100] */
-  .comet-head { stroke:#F4FFB8; stroke-opacity:1;    stroke-width:4;   animation-delay:-0.518s; } /* dash 26u,  shift 74u  → [74..100] */
-  @keyframes comet-run {
-    from { stroke-dashoffset: 0; }
-    to   { stroke-dashoffset: -1000; } /* matches pathLength below */
-  }
-
   .stage {
     position:fixed; inset:0; z-index:2;
     display:flex; align-items:center; justify-content:center;
@@ -109,11 +76,11 @@
   /* ---------- C1: legibility scrim (cinematic vignette, no edges) ---------- */
   .scrim {
     position:absolute; left:50%; top:50%;
-    width:640px; height:780px;
+    width:520px; height:420px;
     transform:translate(-50%,-50%);
     background: radial-gradient(closest-side,
-      rgba(19,21,14,0.60) 0%,
-      rgba(19,21,14,0.50) 34%,
+      rgba(19,21,14,0.62) 0%,
+      rgba(19,21,14,0.52) 34%,
       rgba(19,21,14,0.30) 58%,
       rgba(19,21,14,0.12) 80%,
       rgba(19,21,14,0)    100%);
@@ -121,7 +88,7 @@
   }
   .celebration.show .scrim {
     animation: scrim-in 0.25s ease-out both,
-               scrim-out 0.4s ease-in 4.3s forwards;
+               scrim-out 0.5s ease-in 29s forwards;
   }
   @keyframes scrim-in  { from { opacity:0; } to { opacity:1; } }
   @keyframes scrim-out { from { opacity:1; } to { opacity:0; } }
@@ -175,13 +142,21 @@
   .mascot-wrap img { width:100%; height:100%; object-fit:cover; display:block; transform: scale(1.06); }
   .celebration.show .mascot-wrap {
     animation: mascot-in 0.55s cubic-bezier(0.34,1.56,0.64,1) 0.06s both,
-               el-out 0.35s ease-in 4.2s forwards;
+               mascot-idle 2.6s ease-in-out 2s 10,
+               el-out 0.35s ease-in 29.2s forwards;
   }
   @keyframes mascot-in { /* squash & stretch spring */
     0%   { opacity:0; transform:scale3d(0.3,0.3,1); }
     45%  { opacity:1; transform:scale3d(1.02,1.1,1); }
     70%  { transform:scale3d(1.07,0.97,1); }
     100% { opacity:1; transform:scale3d(1,1,1); }
+  }
+  /* slow ambient bob during the long hold — keeps the mascot feeling
+     alive without competing with the entrance spring. Runs a fixed
+     10 loops (~26s) so it naturally winds down before the 29.2s exit. */
+  @keyframes mascot-idle {
+    0%,100% { transform:scale3d(1,1,1) translateY(0); }
+    50%     { transform:scale3d(1,1,1) translateY(-5px); }
   }
 
   .txt-col { display:flex; flex-direction:column; align-items:center; gap:4px; }
@@ -192,7 +167,7 @@
   }
   .celebration.show .eyebrow {
     animation: el-in-up 0.22s ease-out 0.35s both,
-               el-out 0.3s ease-in 4.1s forwards;
+               el-out 0.3s ease-in 29.1s forwards;
   }
   .name {
     font-size:44px; font-weight:900; letter-spacing:-0.02em; line-height:1;
@@ -203,7 +178,7 @@
   }
   .celebration.show .name {
     animation: name-in 0.4s cubic-bezier(0.3,0.7,0.2,1) 0.45s both,
-               el-out 0.3s ease-in 4.1s forwards;
+               el-out 0.3s ease-in 29.1s forwards;
   }
   @keyframes name-in { /* left → right inset wipe, robust for any length */
     0%   { opacity:1; clip-path: inset(-25% 115% -25% -8%); }
@@ -221,7 +196,7 @@
   }
   .celebration.show .pill {
     animation: el-in-up 0.32s cubic-bezier(0.22,1,0.36,1) 0.65s both,
-               el-out 0.3s ease-in 4s forwards;
+               el-out 0.3s ease-in 29s forwards;
   }
   .pill-dot { width:7px; height:7px; border-radius:50%; background: var(--lime); box-shadow:0 0 7px rgba(214,242,36,0.9); }
   .pill b { color: var(--lime); }
@@ -246,17 +221,25 @@
     -webkit-text-fill-color: transparent; color: transparent;
   }
 
-  .spark {
-    margin-top: 2px;
+  /* ---------- mid-hold spark cross-fade (t≈20s, line #1 -> line #2) ---------- */
+  .spark-stack { position:relative; margin-top:2px; max-width:84vw; text-align:center; height:1.3em; }
+  .spark-stack .spark-line {
+    position:absolute; left:50%; top:0; transform:translateX(-50%);
+    white-space:nowrap;
     font-size:16px; font-weight:700; letter-spacing:-0.01em;
     color: var(--lime-soft, #DFF584); opacity:0;
     text-shadow: 0 1px 2px rgba(19,21,14,0.75), 0 2px 12px rgba(19,21,14,0.5);
-    text-align:center; max-width: 84vw;
   }
-  .celebration.show .spark {
+  .celebration.show .spark-line.l1 {
     animation: el-in-up 0.3s ease-out 0.85s both,
-               el-out 0.3s ease-in 3.9s forwards;
+               crossfade-out 0.7s ease-in 19.6s forwards;
   }
+  .celebration.show .spark-line.l2 {
+    animation: crossfade-in 0.7s ease-out 20.1s both,
+               el-out 0.3s ease-in 28.9s forwards;
+  }
+  @keyframes crossfade-out { from { opacity:1; } to { opacity:0; } }
+  @keyframes crossfade-in  { from { opacity:0; } to { opacity:1; } }
 
   /* shared entrance/exit primitives */
   @keyframes el-in-up {
@@ -270,23 +253,24 @@
 
   .confetti { position:fixed; inset:0; pointer-events:none; z-index:3; }
 
-  /* ---------- reduced motion: simple fades only ---------- */
+  /* ---------- reduced motion: simple fades only (still holds ~29s) ---------- */
   @media (prefers-reduced-motion: reduce) {
-    .comet { animation:none; }
-    .comet-glow, .comet-t2, .comet-t1 { stroke-opacity:0.2; }
-    .comet-head { stroke-opacity:0.6; }
     .ring, .flash { display:none; }
     .celebration.show .scrim {
-      animation: rm-in 0.3s ease both, rm-out 0.4s ease 4.3s forwards;
+      animation: rm-in 0.3s ease both, rm-out 0.4s ease 29s forwards;
     }
-    .celebration.show .mascot-wrap,
+    .celebration.show .mascot-wrap {
+      animation: rm-in 0.35s ease both, rm-out 0.4s ease 29.2s forwards;
+    }
     .celebration.show .eyebrow,
     .celebration.show .name,
-    .celebration.show .pill,
-    .celebration.show .spark {
-      animation: rm-in 0.35s ease both, rm-out 0.4s ease 4.1s forwards;
+    .celebration.show .pill {
+      animation: rm-in 0.35s ease both, rm-out 0.4s ease 29.1s forwards;
       clip-path:none;
     }
+    /* reduced motion: line #1 stays on screen the whole hold, no cross-fade */
+    .celebration.show .spark-line.l1 { animation: rm-in 0.35s ease both, rm-out 0.4s ease 28.9s forwards; }
+    .celebration.show .spark-line.l2 { animation:none; opacity:0; }
     .count-track.tick { animation:none; }
   }
   @keyframes rm-in  { from { opacity:0; } to { opacity:1; } }
@@ -294,19 +278,6 @@
 </style>
 </head>
 <body>
-<div class="vignette">
-  <svg viewBox="0 0 1080 1920" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-    <!-- pathLength=1000 normalizes the perimeter to 1000 units regardless of
-         actual pixel size, so the dash math is resolution-independent -->
-    <rect class="border-static" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000"/>
-    <g class="comet-g">
-      <rect class="comet comet-glow" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="110 890"/>
-      <rect class="comet comet-t2"   x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="95 905"/>
-      <rect class="comet comet-t1"   x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="55 945"/>
-      <rect class="comet comet-head" x="10" y="10" width="1060" height="1900" rx="28" pathLength="1000" stroke-dasharray="26 974"/>
-    </g>
-  </svg>
-</div>
 <canvas class="confetti" id="confetti"></canvas>
 <div class="stage">
   <div class="celebration" id="celebration">
@@ -321,7 +292,10 @@
         <div class="eyebrow">Just joined Neo</div>
         <div class="name" id="popName">Jordan</div>
         <div class="pill"><span class="pill-dot"></span>Creator <b id="popCount"><span class="count-hash">#</span><span class="count-mask"><span class="count-track" id="countTrack"><span id="countOld">148</span><span id="countNew">149</span></span></span></b> is in</div>
-        <div class="spark" id="popSpark">Bet on themselves today</div>
+        <div class="spark-stack">
+          <div class="spark-line l1" id="popSpark">Bet on themselves today</div>
+          <div class="spark-line l2" id="popSpark2">Chose growth over comfort</div>
+        </div>
       </div>
     </div>
   </div>
@@ -330,7 +304,7 @@
 <script>
 (() => {
   const $cel = document.getElementById('celebration');
-  const $popName = document.getElementById('popName'), $popSpark = document.getElementById('popSpark');
+  const $popName = document.getElementById('popName'), $popSpark = document.getElementById('popSpark'), $popSpark2 = document.getElementById('popSpark2');
   const $countTrack = document.getElementById('countTrack'), $countOld = document.getElementById('countOld'), $countNew = document.getElementById('countNew');
   const $confetti = document.getElementById('confetti');
   const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -355,13 +329,17 @@
     'Doing the work now',
     'Building something real',
   ];
+  // pick 2 DISTINCT lines per celebration (line #1 shown first, line #2
+  // cross-fades in at t≈20s) — never repeats the prior celebration's line #1
   let lastSpark = -1;
-  function nextSpark() {
-    if (SPARK_LINES.length <= 1) return SPARK_LINES[0] || '';
+  function nextSparkPair() {
+    if (SPARK_LINES.length <= 1) { const only = SPARK_LINES[0] || ''; return [only, only]; }
     let i;
     do { i = (Math.random() * SPARK_LINES.length) | 0; } while (i === lastSpark);
     lastSpark = i;
-    return SPARK_LINES[i];
+    let j;
+    do { j = (Math.random() * SPARK_LINES.length) | 0; } while (j === i);
+    return [SPARK_LINES[i], SPARK_LINES[j]];
   }
 
   let queue = [], showing = false;
@@ -374,13 +352,15 @@
     if (!next) { showing = false; return; }
     showing = true;
     play(next.name, next.total);
-    setTimeout(drain, 5000); // staged timeline ends ≈4.7s + settle buffer
+    setTimeout(drain, 30500); // 30s hold + settle buffer — every buyer gets their FULL moment
   }
 
-  let tickTimer = 0;
+  let tickTimer = 0, midPulseTimer = 0;
   function play(name, total) {
     $popName.textContent = cap(name);
-    $popSpark.textContent = nextSpark();
+    const [line1, line2] = nextSparkPair();
+    $popSpark.textContent = line1;
+    $popSpark2.textContent = line2;
 
     const n = Number(total);
     const hasTotal = Number.isFinite(n) && n > 0;
@@ -388,6 +368,7 @@
 
     // count odometer: render N-1, roll to N at t≈900ms (mid-hold)
     clearTimeout(tickTimer);
+    clearTimeout(midPulseTimer);
     $countTrack.classList.remove('tick');
     if (hasTotal) {
       if (reduceMotion) {
@@ -404,6 +385,10 @@
     $cel.classList.remove('show'); void $cel.offsetWidth;
     $cel.classList.add('show');
     burst(isMilestone ? 2.5 : 1);
+
+    // t≈10s: secondary confetti pulse — a "still celebrating" beat so the
+    // 30s hold doesn't go visually dead in the middle
+    if (!reduceMotion) midPulseTimer = setTimeout(() => burst((isMilestone ? 2.5 : 1) * 0.4), 10000);
   }
 
   // ---- confetti across the whole canvas, centered on the mascot ----
@@ -470,9 +455,12 @@
   } catch {}
 
   // ---- demo dry-run: ?demo=1 or ?demo=Name fires one test pop ----
-  // ---- QA loop: ?demo=1&loop=1 re-fires every 6.5s, rotating fake
-  //      names + incrementing count (first loop lands on #150 —
-  //      handy for eyeballing milestone mode) ----
+  // ---- QA loop: ?demo=1&loop=1 queues rotating fake buyers back-to-back
+  //      (each still gets the FULL 30s hold — this proves the real-world
+  //      serial-queue behavior during a sales burst, it does not speed
+  //      anything up). ?demo=1&loop=1&fast=1 instead re-fires every 3s
+  //      for rapid eyeballing of the choreography/milestone/cross-fade —
+  //      NOT representative of real timing, QA-only. ----
   try {
     const qp = new URLSearchParams(location.search);
     if (qp.has('demo')) {
@@ -482,7 +470,8 @@
       if (qp.has('loop')) {
         const FAKE_NAMES = ['Maya','Chris','Alexis','Sam','Riley','Jordan','Taylor','Devon'];
         let loopTotal = 149, li = 0;
-        setInterval(() => enqueue(FAKE_NAMES[li++ % FAKE_NAMES.length], ++loopTotal), 6500);
+        const intervalMs = qp.has('fast') ? 3000 : 30500;
+        setInterval(() => enqueue(FAKE_NAMES[li++ % FAKE_NAMES.length], ++loopTotal), intervalMs);
       }
     }
   } catch {}
