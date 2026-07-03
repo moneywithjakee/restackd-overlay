@@ -222,7 +222,7 @@
   }
 
   /* ---------- mid-hold spark cross-fade (t≈20s, line #1 -> line #2) ---------- */
-  .spark-stack { position:relative; margin-top:2px; max-width:84vw; text-align:center; height:1.3em; }
+  .spark-stack { position:relative; margin-top:2px; width:84vw; max-width:520px; text-align:center; height:1.3em; }
   .spark-stack .spark-line {
     position:absolute; left:50%; top:0; transform:translateX(-50%);
     white-space:nowrap;
@@ -231,15 +231,30 @@
     text-shadow: 0 1px 2px rgba(19,21,14,0.75), 0 2px 12px rgba(19,21,14,0.5);
   }
   .celebration.show .spark-line.l1 {
-    animation: el-in-up 0.3s ease-out 0.85s both,
-               crossfade-out 0.7s ease-in 19.6s forwards;
+    animation: spark-in-up 0.3s ease-out 0.85s both,
+               spark-crossfade-out 0.7s ease-in 19.6s forwards;
   }
   .celebration.show .spark-line.l2 {
-    animation: crossfade-in 0.7s ease-out 20.1s both,
-               el-out 0.3s ease-in 28.9s forwards;
+    animation: spark-crossfade-in 0.7s ease-out 20.1s both,
+               spark-out 0.3s ease-in 28.9s forwards;
   }
-  @keyframes crossfade-out { from { opacity:1; } to { opacity:0; } }
-  @keyframes crossfade-in  { from { opacity:0; } to { opacity:1; } }
+  /* dedicated keyframes (not the shared el-in-up/el-out) because those
+     animate translateY only — applying them here would silently drop
+     this element's static translateX(-50%) centering the instant the
+     animation starts (fill-mode replaces the whole transform, it does
+     not compose with the static rule). Every keyframe below re-states
+     translateX(-50%) alongside its own translateY/opacity so centering
+     never gets clobbered. */
+  @keyframes spark-in-up {
+    from { opacity:0; transform:translateX(-50%) translateY(12px); }
+    to   { opacity:1; transform:translateX(-50%) translateY(0); }
+  }
+  @keyframes spark-out {
+    from { opacity:1; transform:translateX(-50%) translateY(0); }
+    to   { opacity:0; transform:translateX(-50%) translateY(-14px); }
+  }
+  @keyframes spark-crossfade-out { from { opacity:1; transform:translateX(-50%); } to { opacity:0; transform:translateX(-50%); } }
+  @keyframes spark-crossfade-in  { from { opacity:0; transform:translateX(-50%); } to { opacity:1; transform:translateX(-50%); } }
 
   /* shared entrance/exit primitives */
   @keyframes el-in-up {
