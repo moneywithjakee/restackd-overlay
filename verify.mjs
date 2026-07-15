@@ -47,7 +47,12 @@ await page.route('https://restackd.com/api/overlay/stream', r => r.abort())
 await page.goto(pathToFileURL(HTML).toString(), { waitUntil: 'networkidle' })
 await page.waitForTimeout(400)
 
-await page.evaluate((s) => window.__testHooks.showState(s), state)
+if (state === 'burst') {
+  await page.evaluate(() => window.__testHooks.showState('burst'))
+  await page.evaluate(() => document.getElementById('burstName').textContent = 'Dario')
+} else {
+  await page.evaluate((s) => window.__testHooks.showState(s), state)
+}
 await page.waitForTimeout(700) // let the crossfade settle
 
 await page.screenshot({ path: path.join(__dirname, out) })

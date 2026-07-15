@@ -129,6 +129,19 @@
   .feature-icon { width:44px; height:44px; fill: var(--lime); }
   .feature-icon--accent { fill: #B892FF; }
   .feature span { font-size:16px; font-weight:800; color: var(--cream); line-height:1.3; }
+
+  .burst { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
+  .burst-name { font-size: 84px; font-weight: 900; color: var(--lime); text-shadow: 0 0 40px rgba(214,242,36,0.4); }
+  .burst-sub { font-size: 24px; font-weight: 800; color: var(--cream); letter-spacing:0.03em; }
+  .confetti { position:absolute; inset:0; pointer-events:none; }
+
+  .mascot.react { animation: mascot-react 0.26s cubic-bezier(0.34,1.56,0.64,1) both; }
+  @keyframes mascot-react {
+    0%   { transform: rotate(0deg) scale(1); }
+    28%  { transform: rotate(-6deg) scale(1.09); }
+    62%  { transform: rotate(6deg) scale(1.05); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
 </style>
 </head>
 <body>
@@ -214,7 +227,12 @@
         </div>
       </div>
     </section>
-    <section class="hero-state" data-state="burst"></section>
+    <section class="hero-state" data-state="burst">
+      <div class="burst">
+        <div class="burst-name" id="burstName">—</div>
+        <div class="burst-sub">JUST JOINED · $249 LIFETIME</div>
+      </div>
+    </section>
     <section class="hero-state" data-state="empty"></section>
     <section class="hero-state" data-state="offline"></section>
   </div>
@@ -227,6 +245,7 @@
   </div>
 
   <span class="conn" id="conn"></span>
+  <canvas class="confetti" id="confetti"></canvas>
 </div>
 
 <script>
@@ -298,6 +317,60 @@
     else { $conn.textContent = ''; $conn.classList.remove('offline'); }
   }
 
+  const $mascot = document.getElementById('mascot');
+  const $confetti = document.getElementById('confetti');
+
+  let mascotTimer = 0;
+  function mascotReact() {
+    if (reduceMotion) return;
+    $mascot.classList.remove('react'); void $mascot.offsetWidth; $mascot.classList.add('react');
+    clearTimeout(mascotTimer);
+    mascotTimer = setTimeout(() => $mascot.classList.remove('react'), 320);
+  }
+
+  let cw = 0, ch = 0, cctx = null, raf = 0;
+  const parts = [];
+  function sizeConfetti() {
+    cw = $banner.clientWidth; ch = $banner.clientHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    $confetti.width = cw * dpr; $confetti.height = ch * dpr;
+    $confetti.style.width = cw + 'px'; $confetti.style.height = ch + 'px';
+    cctx = $confetti.getContext('2d'); cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function fireConfetti() {
+    if (reduceMotion) return;
+    if (cw === 0) sizeConfetti();
+    const colors = ['#D6F224', '#DFF584', '#FAFBF7'];
+    const ox = cw * 0.5, oy = ch * 0.3;
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2, sp = 2.5 + Math.random() * 4;
+      parts.push({
+        x: ox + (Math.random() * 16 - 8), y: oy,
+        vx: Math.cos(a) * sp * 0.6, vy: Math.sin(a) * sp * 0.6 - 2.5,
+        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.35,
+        size: 3.5 + Math.random() * 3.5,
+        color: colors[(Math.random() * colors.length) | 0], life: 1,
+      });
+    }
+    if (!raf) raf = requestAnimationFrame(tick);
+  }
+  function tick() {
+    cctx.clearRect(0, 0, cw, ch);
+    const g = 0.3, d = 0.99;
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.vy += g; p.vx *= d; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.014;
+      if (p.life <= 0 || p.y > ch + 10) { parts.splice(i, 1); continue; }
+      cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot);
+      cctx.globalAlpha = Math.max(0, Math.min(1, p.life)); cctx.fillStyle = p.color;
+      cctx.fillRect(-p.size / 2, -p.size * 0.2, p.size, p.size * 0.4);
+      cctx.restore();
+    }
+    raf = parts.length > 0 ? requestAnimationFrame(tick) : 0;
+  }
+  window.addEventListener('resize', sizeConfetti, { passive: true });
+  sizeConfetti();
+
   async function loadSpotsColdStart() {
     try {
       const r = await fetch(`${API_BASE}${SPOTS}`, { cache: 'no-store', mode: 'cors' });
@@ -312,7 +385,7 @@
       if (r.ok) {
         const d = await r.json();
         const top = d.entries && d.entries[0];
-        if (top) renderBuyer(top.name, false);
+        if (top) { renderBuyer(top.name, false); lastSeenId = `${top.position ?? ''}-${top.name}`; }
         markConn('ok');
       } else markConn('offline');
     } catch { markConn('offline'); }
@@ -343,6 +416,72 @@
 
   showState(ROTATION_STATES[0]);
   startRotation();
+
+  const BURST_MS = 4500;
+  let burstTimer = 0;
+
+  function triggerSaleBurst(name, remaining, soldToday) {
+    stopRotation();
+    document.getElementById('burstName').textContent = cap(name);
+    mascotReact();
+    fireConfetti();
+    showState('burst');
+    clearTimeout(burstTimer);
+    burstTimer = setTimeout(() => {
+      showState(ROTATION_STATES[rotationIndex]);
+      startRotation();
+    }, BURST_MS);
+  }
+
+  let lastSeenId = null;
+
+  function onNewSale(name, position, remaining, soldToday) {
+    const id = `${position ?? ''}-${name}`;
+    if (id === lastSeenId) return; // dedupe: SSE + ticker poll can both report the same sale
+    lastSeenId = id;
+    renderBuyer(name, true);
+    if (typeof remaining === 'number') applySpots({ remaining, soldToday: soldToday ?? 0 });
+    triggerSaleBurst(name, remaining, soldToday);
+  }
+
+  async function pollTicker() {
+    try {
+      const r = await fetch(`${API_BASE}${TICKER}`, { cache: 'no-store', mode: 'cors' });
+      if (r.ok) {
+        const d = await r.json();
+        const top = d.entries && d.entries[0];
+        if (top) {
+          const id = `${top.position ?? ''}-${top.name}`;
+          if (lastSeenId !== null && id !== lastSeenId) {
+            onNewSale(top.name, top.position);
+          } else if (lastSeenId === null) {
+            lastSeenId = id;
+          }
+        }
+        markConn('ok');
+      } else markConn('offline');
+    } catch { markConn('offline'); }
+  }
+
+  const POLL_MS = 3000;
+  setInterval(pollTicker, POLL_MS);
+
+  let es = null;
+  function openSSE() {
+    try {
+      es = new EventSource(`${API_BASE}${SSE}`);
+      es.addEventListener('message', ev => {
+        try {
+          const p = JSON.parse(ev.data);
+          if (p?.name) onNewSale(p.name, p.position, p.spotsRemaining, p.soldToday);
+        } catch {}
+      });
+      es.addEventListener('error', () => {
+        if (es && es.readyState === EventSource.CLOSED) { es.close(); es = null; setTimeout(openSSE, 4000); }
+      });
+    } catch {}
+  }
+  openSSE();
 
   window.__testHooks = {
     showState,
