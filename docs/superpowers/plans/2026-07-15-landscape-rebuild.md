@@ -18,7 +18,7 @@
   - `GET https://restackd.com/api/overlay/spots` → `{ remaining, total, soldToday }` (cold-load only)
   - `GET https://restackd.com/api/founding/ticker` → `{ entries[], latestEntry, realCount }` (cold-load + 3000ms poll, resiliency fallback)
   - `GET https://restackd.com/api/overlay/stream` (SSE) → on `message`: `{ name, position, timeLabel, ts, spotsRemaining, soldToday }` — **this single SSE payload already carries spots-remaining and sold-today**, so no separate re-poll of `/api/overlay/spots` is needed after cold-load; verified against `stackd/src/lib/overlay/events.ts` and the webhook publish call site.
-- **Real brand assets only**: the Restackd logo is always inline SVG (never styled HTML text standing in for a logo), reusing the exact SVG already inlined in the current `index.html`. The mascot is the existing `assets/neo-mascot-cropped.png` (no new asset).
+- **Real brand assets only**: the Restackd logo is always inline SVG (never styled HTML text standing in for a logo) — the wordmark comes from the canonical brand asset `restackd-brand/01-logos/wordmark/restackd-wordmark-white.svg`, inlined verbatim. (The current live `index.html` actually renders the brand name as styled text, which violates this rule — this rebuild corrects that, it does not copy it.) The mascot is the existing `assets/neo-mascot-cropped.png` (no new asset).
 - **Phosphor icons, not emoji**, for the feature-icon row.
 - **Colors/fonts match what's actually live**, not the stale README: lime `#D6F224`, ink `#13150E` / `#1B1D14`, cream `#FAFBF7`, font `Inter` (weights 500/600/700/800/900, already preloaded via Google Fonts in the current file).
 - **Respect `prefers-reduced-motion`**: every animation path in the current file checks `reduceMotion` before firing — carry this forward for every new animated element.
@@ -84,7 +84,7 @@ Expected: `package.json` gains a `devDependencies` block with `"playwright": "^1
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="assets/neo-mascot-cropped.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@800&display=swap" rel="stylesheet">
 <style>
   :root {
     --lime: #D6F224;
@@ -152,11 +152,9 @@ Expected: `package.json` gains a `devDependencies` block with `"playwright": "^1
   <div class="rail rail-left">
     <div class="mascot-wrap"><img class="mascot" id="mascot" src="assets/neo-mascot-cropped.png" alt=""></div>
     <div class="brand">
-      <svg class="logo" viewBox="0 0 120 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="0" y="4" width="24" height="6" rx="2" fill="var(--lime)"/>
-        <rect x="0" y="13" width="24" height="6" rx="2" fill="var(--cream)"/>
-        <rect x="0" y="22" width="24" height="6" rx="2" fill="var(--w-50)"/>
-        <text x="32" y="23" font-family="Inter" font-weight="800" font-size="20" fill="var(--cream)">restackd</text>
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
+        <title>Restackd — Wordmark (White)</title>
+        <text x="0" y="60" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="64" font-weight="800" fill="#FFFFFF" letter-spacing="-2.5">restackd</text>
       </svg>
       <span class="live-pill"><span>●</span> LIVE</span>
     </div>
@@ -207,7 +205,7 @@ Expected: `package.json` gains a `devDependencies` block with `"playwright": "^1
 </html>
 ```
 
-Notes for the implementer: the inline logo SVG above is a **placeholder block-mark**, not the real Restackd wordmark — the real one already exists in the current live `index.html`. Before running this step, open the current (soon-to-be-replaced) `index.html` in this same repo and copy its actual inline `<svg class="rlogo">...</svg>` block verbatim in place of the placeholder shown here (the current file's logo markup is above the `.card` header, look for the element with `viewBox` and the real R-mark paths). Do not hand-draw new logo geometry.
+Notes for the implementer: the inline logo SVG above is copied verbatim from the real, canonical brand asset at `C:\Users\Jake\Projects\restackd-brand\01-logos\wordmark\restackd-wordmark-white.svg` (white variant, correct for this dark banner background). This is deliberately **not** copied from the current live `index.html`'s header markup — that file renders the brand name as plain styled text (`<span class="wm-restackd">Restackd</span>`) plus a small unrelated decorative bars icon, which violates the standing brand rule that "Restackd" must never appear as styled HTML text where a logo belongs. Do not use that pattern. The wordmark SVG's `font-family="Plus Jakarta Sans"` requires the Plus Jakarta Sans font import already added to `<head>` above — do not drop that font link.
 
 - [ ] **Step 4: Write the verification harness**
 
