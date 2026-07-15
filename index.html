@@ -103,6 +103,26 @@
   .buyer-suffix { font-size: 15px; font-weight: 600; color: var(--w-50); flex-shrink:0; }
 
   .banner.is-urgent .live-num { color: var(--red); text-shadow: 0 0 40px rgba(255,77,77,0.4); }
+
+  .bnpl { display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
+  .bnpl-hero { display:flex; align-items:baseline; gap:14px; }
+  .bnpl-amount { font-size: 120px; font-weight: 900; color: var(--lime); line-height:1; }
+  .bnpl-down { font-size: 30px; font-weight: 800; color: var(--cream); }
+  .bnpl-sub { font-size: 18px; font-weight: 700; color: var(--w-50); letter-spacing:0.06em; }
+  .bnpl-badges { display:flex; gap:12px; }
+  .bnpl-badge {
+    display:inline-flex; align-items:center; padding:10px 20px; border-radius:10px;
+    font-size:18px; font-weight:800;
+  }
+  .bnpl-badge--afterpay { background:#B2FCE4; color:#111; }
+  .bnpl-badge--klarna { background:#FFB3C7; color:#111; }
+  .bnpl-code {
+    display:flex; align-items:center; gap:16px; margin-top:6px;
+    border:2px solid var(--lime); border-radius:12px; padding:10px 22px;
+  }
+  .bnpl-code-label { font-size:20px; font-weight:800; color:var(--cream); }
+  .bnpl-code-label b { color:var(--lime); }
+  .bnpl-code-off { font-size:20px; font-weight:900; color:var(--ink); background:var(--lime); padding:6px 14px; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -147,7 +167,23 @@
         </div>
       </div>
     </section>
-    <section class="hero-state" data-state="bnpl"></section>
+    <section class="hero-state" data-state="bnpl">
+      <div class="bnpl">
+        <div class="bnpl-hero">
+          <span class="bnpl-amount">$0</span>
+          <span class="bnpl-down">DOWN</span>
+        </div>
+        <span class="bnpl-sub">PAY LATER WITH</span>
+        <div class="bnpl-badges">
+          <span class="bnpl-badge bnpl-badge--afterpay">afterpay</span>
+          <span class="bnpl-badge bnpl-badge--klarna">Klarna.</span>
+        </div>
+        <div class="bnpl-code">
+          <span class="bnpl-code-label">USE CODE <b>JAKE</b></span>
+          <span class="bnpl-code-off">GET $25 OFF</span>
+        </div>
+      </div>
+    </section>
     <section class="hero-state" data-state="features"></section>
     <section class="hero-state" data-state="burst"></section>
     <section class="hero-state" data-state="empty"></section>
