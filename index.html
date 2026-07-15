@@ -138,6 +138,10 @@
   .burst-sub { font-size: 24px; font-weight: 800; color: var(--cream); letter-spacing:0.03em; }
   .confetti { position:absolute; inset:0; pointer-events:none; }
 
+  .empty-block { display:flex; flex-direction:column; gap:12px; }
+  .empty-title { font-size: 54px; font-weight: 900; color: var(--lime); }
+  .empty-sub { font-size: 18px; font-weight: 600; color: var(--w-50); }
+
   .mascot.react { animation: mascot-react 0.26s cubic-bezier(0.34,1.56,0.64,1) both; }
   @keyframes mascot-react {
     0%   { transform: rotate(0deg) scale(1); }
@@ -236,8 +240,18 @@
         <div class="burst-sub">JUST JOINED · $249 LIFETIME</div>
       </div>
     </section>
-    <section class="hero-state" data-state="empty"></section>
-    <section class="hero-state" data-state="offline"></section>
+    <section class="hero-state" data-state="empty">
+      <div class="empty-block">
+        <span class="empty-title">SOLD OUT TODAY</span>
+        <span class="empty-sub">New spots drop at midnight PT — follow for the next drop.</span>
+      </div>
+    </section>
+    <section class="hero-state" data-state="offline">
+      <div class="empty-block">
+        <span class="empty-title" style="color:var(--w-75);">$249 LIFETIME</span>
+        <span class="empty-sub">Once · + 1:1 coaching at checkout</span>
+      </div>
+    </section>
   </div>
 
   <div class="rail rail-right">
@@ -312,12 +326,28 @@
     currentRemaining = spots.remaining;
     renderCount(spots.remaining);
     $soldToday.textContent = `${spots.soldToday} sold today`;
-    $banner.classList.toggle('is-urgent', spots.remaining <= 5);
+    $banner.classList.toggle('is-urgent', spots.remaining > 0 && spots.remaining <= 5);
+    const wasLive = ROTATION_STATES[rotationIndex] === 'live';
+    if (spots.remaining <= 0 && !ROTATION_STATES.includes('empty')) {
+      ROTATION_STATES.splice(ROTATION_STATES.indexOf('live'), 1, 'empty');
+      if (wasLive) showState('empty');
+    } else if (spots.remaining > 0 && ROTATION_STATES.includes('empty')) {
+      ROTATION_STATES.splice(ROTATION_STATES.indexOf('empty'), 1, 'live');
+      if (activeState === 'empty') showState('live');
+    }
   }
 
+  let everGotData = false;
   function markConn(s) {
-    if (s === 'offline') { $conn.textContent = '● offline'; $conn.classList.add('offline'); }
-    else { $conn.textContent = ''; $conn.classList.remove('offline'); }
+    if (s === 'ok') everGotData = true;
+    if (s === 'offline') {
+      $conn.textContent = '● offline'; $conn.classList.add('offline');
+      if (!everGotData && !ROTATION_STATES.includes('offline')) {
+        ROTATION_STATES.splice(ROTATION_STATES.indexOf('live'), 1, 'offline');
+        showState('offline');
+        stopRotation();
+      }
+    } else { $conn.textContent = ''; $conn.classList.remove('offline'); }
   }
 
   const $mascot = document.getElementById('mascot');
