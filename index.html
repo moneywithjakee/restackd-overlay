@@ -68,6 +68,20 @@
 
   .conn { position:absolute; bottom:10px; left:16px; font-size:12px; font-weight:700; color:var(--w-50); opacity:0; }
   .conn.offline { opacity:1; }
+
+  .testi { max-width: 1180px; }
+  .testi-quote {
+    font-size: 46px; font-weight: 900; line-height: 1.15; color: var(--cream);
+    letter-spacing: -0.01em;
+  }
+  .testi-line { display:block; font-size: 32px; font-weight: 800; color: var(--w-75); margin: 4px 0; }
+  .testi-arrow { color: var(--lime); margin-right: 6px; }
+  .testi-highlight { display:block; color: var(--lime); font-size: 58px; margin: 6px 0; }
+  .testi-sub {
+    display:inline-block; margin-top: 18px;
+    font-size: 18px; font-weight: 700; color: var(--ink);
+    background: var(--lime); padding: 8px 16px; border-radius: 6px;
+  }
 </style>
 </head>
 <body>
@@ -84,7 +98,18 @@
   </div>
 
   <div class="hero" id="hero">
-    <section class="hero-state" data-state="testimonial"></section>
+    <section class="hero-state" data-state="testimonial">
+      <div class="testi">
+        <p class="testi-quote">
+          "DAD OF 3
+          <span class="testi-line"><span class="testi-arrow">»</span> PAYCHECK TO PAYCHECK</span>
+          <span class="testi-line"><span class="testi-arrow">»</span> CORPORATE WORKER</span>
+          <span class="testi-highlight">TO $30K/MONTH</span>
+          FROM MY PHONE"
+        </p>
+        <p class="testi-sub">Now helping ordinary people build online income with NEO.</p>
+      </div>
+    </section>
     <section class="hero-state" data-state="live"></section>
     <section class="hero-state" data-state="bnpl"></section>
     <section class="hero-state" data-state="features"></section>
