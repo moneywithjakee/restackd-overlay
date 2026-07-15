@@ -82,6 +82,27 @@
     font-size: 18px; font-weight: 700; color: var(--ink);
     background: var(--lime); padding: 8px 16px; border-radius: 6px;
   }
+
+  .live-block { display:flex; flex-direction:column; gap:22px; }
+  .live-num-row { display:flex; align-items:baseline; gap:20px; }
+  .live-num { font-size: 130px; font-weight: 900; color: var(--lime); line-height:1; text-shadow: 0 0 40px rgba(214,242,36,0.35); }
+  .live-num-label { display:flex; flex-direction:column; gap:4px; }
+  .live-num-label span:first-child { font-size: 26px; font-weight: 800; color: var(--cream); letter-spacing:0.02em; }
+  .live-sold { font-size: 17px; font-weight: 700; color: var(--w-50); }
+
+  .buyer-flash {
+    display:inline-flex; align-items:center; gap:12px; align-self:flex-start;
+    background: rgba(214,242,36,0.08); border:1px solid rgba(214,242,36,0.35); border-radius:14px;
+    padding: 12px 20px; max-width: 640px;
+    opacity:0; transform: translateY(6px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+  .buyer-flash.enter { opacity:1; transform:none; }
+  .buyer-flash-dot { width:9px; height:9px; border-radius:50%; background:var(--lime); box-shadow:0 0 8px rgba(214,242,36,0.7); flex-shrink:0; }
+  .buyer-name { font-size: 22px; font-weight: 800; color: var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .buyer-suffix { font-size: 15px; font-weight: 600; color: var(--w-50); flex-shrink:0; }
+
+  .banner.is-urgent .live-num { color: var(--red); text-shadow: 0 0 40px rgba(255,77,77,0.4); }
 </style>
 </head>
 <body>
@@ -110,7 +131,22 @@
         <p class="testi-sub">Now helping ordinary people build online income with NEO.</p>
       </div>
     </section>
-    <section class="hero-state" data-state="live"></section>
+    <section class="hero-state" data-state="live">
+      <div class="live-block">
+        <div class="live-num-row">
+          <span class="live-num" id="spotsNum">–</span>
+          <div class="live-num-label">
+            <span>SPOTS LEFT TODAY</span>
+            <span class="live-sold" id="soldToday">– sold today</span>
+          </div>
+        </div>
+        <div class="buyer-flash" id="buyerFlash">
+          <span class="buyer-flash-dot"></span>
+          <span class="buyer-name" id="buyerName">Loading…</span>
+          <span class="buyer-suffix">just joined · $249 Lifetime</span>
+        </div>
+      </div>
+    </section>
     <section class="hero-state" data-state="bnpl"></section>
     <section class="hero-state" data-state="features"></section>
     <section class="hero-state" data-state="burst"></section>
@@ -147,6 +183,79 @@
   };
 
   showState('testimonial');
+
+  const $spotsNum = document.getElementById('spotsNum');
+  const $soldToday = document.getElementById('soldToday');
+  const $buyerFlash = document.getElementById('buyerFlash');
+  const $buyerName = document.getElementById('buyerName');
+  const $banner = document.getElementById('banner');
+  const $conn = document.getElementById('conn');
+
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const API_BASE = 'https://restackd.com';
+  const SPOTS = '/api/overlay/spots';
+  const TICKER = '/api/founding/ticker';
+  const SSE = '/api/overlay/stream';
+
+  let currentRemaining = null;
+
+  function renderCount(n) {
+    $spotsNum.textContent = String(Math.max(0, n));
+  }
+
+  function fitBuyerName() {
+    $buyerName.style.fontSize = '';
+    let size = 22;
+    while (size > 15 && $buyerName.scrollWidth > $buyerName.clientWidth) {
+      size -= 0.5;
+      $buyerName.style.fontSize = size + 'px';
+    }
+  }
+
+  const cap = s => !s ? '' : s.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
+
+  function renderBuyer(name, animate) {
+    $buyerFlash.classList.remove('enter'); void $buyerFlash.offsetWidth;
+    $buyerName.textContent = cap(name);
+    fitBuyerName();
+    if (animate && !reduceMotion) $buyerFlash.classList.add('enter');
+    else $buyerFlash.classList.add('enter');
+  }
+
+  function applySpots(spots) {
+    currentRemaining = spots.remaining;
+    renderCount(spots.remaining);
+    $soldToday.textContent = `${spots.soldToday} sold today`;
+    $banner.classList.toggle('is-urgent', spots.remaining <= 5);
+  }
+
+  function markConn(s) {
+    if (s === 'offline') { $conn.textContent = '● offline'; $conn.classList.add('offline'); }
+    else { $conn.textContent = ''; $conn.classList.remove('offline'); }
+  }
+
+  async function loadSpotsColdStart() {
+    try {
+      const r = await fetch(`${API_BASE}${SPOTS}`, { cache: 'no-store', mode: 'cors' });
+      if (r.ok) { applySpots(await r.json()); markConn('ok'); }
+      else markConn('offline');
+    } catch { markConn('offline'); }
+  }
+
+  async function loadTickerColdStart() {
+    try {
+      const r = await fetch(`${API_BASE}${TICKER}`, { cache: 'no-store', mode: 'cors' });
+      if (r.ok) {
+        const d = await r.json();
+        const top = d.entries && d.entries[0];
+        if (top) renderBuyer(top.name, false);
+        markConn('ok');
+      } else markConn('offline');
+    } catch { markConn('offline'); }
+  }
+
+  loadSpotsColdStart();
+  loadTickerColdStart();
 })();
 </script>
 </body>
