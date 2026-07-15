@@ -218,8 +218,14 @@
     $buyerFlash.classList.remove('enter'); void $buyerFlash.offsetWidth;
     $buyerName.textContent = cap(name);
     fitBuyerName();
-    if (animate && !reduceMotion) $buyerFlash.classList.add('enter');
-    else $buyerFlash.classList.add('enter');
+    if (animate && !reduceMotion) {
+      $buyerFlash.classList.add('enter');
+    } else {
+      $buyerFlash.style.transition = 'none';
+      $buyerFlash.classList.add('enter');
+      void $buyerFlash.offsetWidth;
+      $buyerFlash.style.transition = '';
+    }
   }
 
   function applySpots(spots) {
