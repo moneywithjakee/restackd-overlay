@@ -242,13 +242,6 @@
     }
   }
 
-  window.__testHooks = {
-    showState,
-    get activeState() { return activeState; },
-  };
-
-  showState('testimonial');
-
   const $spotsNum = document.getElementById('spotsNum');
   const $soldToday = document.getElementById('soldToday');
   const $buyerFlash = document.getElementById('buyerFlash');
@@ -327,6 +320,37 @@
 
   loadSpotsColdStart();
   loadTickerColdStart();
+
+  const ROTATION_STATES = ['testimonial', 'live', 'bnpl', 'features'];
+  const ROTATION_MS = 5500;
+  let rotationIndex = 0;
+  let rotationTimer = null;
+
+  function advanceRotation() {
+    rotationIndex = (rotationIndex + 1) % ROTATION_STATES.length;
+    showState(ROTATION_STATES[rotationIndex]);
+  }
+
+  function startRotation() {
+    if (rotationTimer) return;
+    rotationTimer = setInterval(advanceRotation, ROTATION_MS);
+  }
+
+  function stopRotation() {
+    clearInterval(rotationTimer);
+    rotationTimer = null;
+  }
+
+  showState(ROTATION_STATES[0]);
+  startRotation();
+
+  window.__testHooks = {
+    showState,
+    stopRotation,
+    startRotation,
+    get activeState() { return activeState; },
+    get rotationIndex() { return rotationIndex; },
+  };
 })();
 </script>
 </body>
