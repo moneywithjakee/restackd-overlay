@@ -358,7 +358,7 @@ git commit -m "feat: testimonial hero state"
 
 **Interfaces:**
 - Consumes: `showState()` from Task 1.
-- Produces: `renderCount(n, animate)`, `renderBuyer(name, animate)`, `fitBuyerName()`, element ids `#spotsNum`, `#soldToday`, `#buyerName`, `#buyerFlash` — **Task 7 (SSE) and Task 8 (urgent) call these exact functions**, so names must match exactly.
+- Produces: `renderCount(n)`, `renderBuyer(name, animate)`, `fitBuyerName()`, element ids `#spotsNum`, `#soldToday`, `#buyerName`, `#buyerFlash` — **Task 7 (SSE) and Task 8 (urgent) call these exact functions**, so names must match exactly.
 
 - [ ] **Step 1: Add the live-data markup**
 
@@ -426,8 +426,7 @@ const SSE = '/api/overlay/stream';
 
 let currentRemaining = null;
 
-function renderCount(n, animate) {
-  // Simple direct-set for now; digit-roll animation added in Task 7 alongside onNewSale.
+function renderCount(n) {
   $spotsNum.textContent = String(Math.max(0, n));
 }
 
@@ -452,7 +451,7 @@ function renderBuyer(name, animate) {
 
 function applySpots(spots) {
   currentRemaining = spots.remaining;
-  renderCount(spots.remaining, false);
+  renderCount(spots.remaining);
   $soldToday.textContent = `${spots.soldToday} sold today`;
   $banner.classList.toggle('is-urgent', spots.remaining <= 5);
 }
@@ -1138,7 +1137,7 @@ Find `applySpots` from Task 3:
 ```javascript
 function applySpots(spots) {
   currentRemaining = spots.remaining;
-  renderCount(spots.remaining, false);
+  renderCount(spots.remaining);
   $soldToday.textContent = `${spots.soldToday} sold today`;
   $banner.classList.toggle('is-urgent', spots.remaining <= 5);
 }
@@ -1147,7 +1146,7 @@ Replace with:
 ```javascript
 function applySpots(spots) {
   currentRemaining = spots.remaining;
-  renderCount(spots.remaining, false);
+  renderCount(spots.remaining);
   $soldToday.textContent = `${spots.soldToday} sold today`;
   $banner.classList.toggle('is-urgent', spots.remaining > 0 && spots.remaining <= 5);
   const wasLive = ROTATION_STATES[rotationIndex] === 'live';
