@@ -103,6 +103,9 @@
   .buyer-suffix { font-size: 15px; font-weight: 600; color: var(--w-50); flex-shrink:0; }
 
   .banner.is-urgent .live-num { color: var(--red); text-shadow: 0 0 40px rgba(255,77,77,0.4); }
+  .banner.is-urgent .live-pill { color: var(--red); background: rgba(255,77,77,0.12); border-color: rgba(255,77,77,0.4); }
+  .banner.is-urgent .live-pill span:first-child { animation: urgent-pulse 1.1s ease-in-out infinite; }
+  @keyframes urgent-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
 
   .bnpl { display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
   .bnpl-hero { display:flex; align-items:baseline; gap:14px; }
