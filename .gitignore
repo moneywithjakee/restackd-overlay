@@ -5,3 +5,5 @@ _q/
 _b/
 _j*/
 snap-*.mjs
+node_modules/
+out/
