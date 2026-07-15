@@ -5,5 +5,8 @@
   "description": "Standalone live overlay for Restackd TikTok streams. No build, edit + push.",
   "scripts": {
     "preview": "node snap-preview.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
   }
 }

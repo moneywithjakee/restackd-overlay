@@ -7,40 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="assets/neo-mascot-cropped.png">
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@800&display=swap" rel="stylesheet">
 <style>
-  /* ============================================================
-   * RESTACKD NEO — Corner Badge (OBS Source 1 of 2)
-   * Real Neo mascot (assets/neo-mascot-cropped.png) + real Restackd
-   * symbol (inline SVG, per brand rule — logo is never styled HTML
-   * text). Compact, drag-anywhere in OBS. Pairs with celebrate.html
-   * (Source 2), which pops the same mascot center-screen on a sale.
-   *
-   * Anatomy:
-   *   ┌──────────────────────────────┐
-   *   │ [mascot]  Restackd  Neo   ⓡ │  mascot + wordmark + tiny R-mark
-   *   │           ● live              │
-   *   ├───────────────────────────────┤
-   *   │          148                  │  member count, per-digit odometer
-   *   │  creators Neo is coaching     │
-   *   │  ● Cary just joined           │  newest buyer flash (auto-fit)
-   *   └───────────────────────────────┘
-   *
-   * Data: same pipeline as before — /api/founding/ticker (SSE + poll).
-   * Real total = newest entry's `position` (ticker's `realCount` field
-   * is just the last-page size, capped at 10 — not the true total).
-   *
-   * PERF CONTRACT (OBS CEF renders at stream framerate):
-   * only `transform` and `opacity` are ever animated. Anything that
-   * "glows and breathes" is a pre-blurred static layer whose OPACITY
-   * animates. Static shadows are fine; animated shadows are not.
-   *
-   * Sale beat choreography (~1.4s, staggered on purpose):
-   *   t=0     mascot tilt-bounce + "+1" chip launch + shimmer + confetti
-   *   t≈80ms  per-digit odometer rolls (only changed digits)
-   *   t≈250ms buyer flash chip slides in
-   * ============================================================ */
   :root {
     --lime: #D6F224;
     --lime-dim: rgba(214,242,36,0.55);
@@ -50,220 +18,86 @@
     --w-75: rgba(250,251,247,0.75);
     --w-50: rgba(250,251,247,0.50);
     --w-12: rgba(250,251,247,0.12);
+    --red: #FF4D4D;
   }
   * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
-  html,body { background:transparent; overflow:hidden; }
+  html,body { background:transparent; overflow:hidden; width:2000px; height:750px; }
   body { font-family:'Inter',system-ui,-apple-system,sans-serif; }
 
-  .card {
+  .banner {
     position: relative;
-    width: 312px;
-    border-radius: 22px;
+    width: 2000px; height: 750px;
+    display: flex;
     background: linear-gradient(160deg, var(--ink) 0%, var(--ink-2) 100%);
-    box-shadow: 0 20px 48px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px rgba(214,242,36,0.09);
     overflow: hidden;
-    padding: 15px 17px 16px;
-  }
-  .card::before {
-    content:''; position:absolute; inset:-45% -15% auto -15%; height:75%;
-    background: radial-gradient(ellipse at 26% 0%, rgba(214,242,36,0.15) 0%, transparent 68%);
-    animation: field-breathe 5.2s ease-in-out infinite;
-    pointer-events:none;
-  }
-  @keyframes field-breathe { 0%,100%{opacity:0.65;} 50%{opacity:1;} }
-
-  /* ---------- B6: idle edge-light — thin lime highlight sweeping the
-     top border once every ~9s. Transform + opacity only; the card's
-     overflow:hidden + border-radius clip it to the border area. ---------- */
-  .edge-light {
-    position:absolute; top:0; left:0; z-index:4; pointer-events:none;
-    width:110px; height:2px; border-radius:2px;
-    background: linear-gradient(90deg, transparent 0%, rgba(214,242,36,0.75) 50%, transparent 100%);
-    opacity:0; transform:translate3d(-120px,0,0);
-    will-change: transform, opacity;
-    animation: edge-sweep 9s linear 2.5s infinite;
-  }
-  @keyframes edge-sweep {
-    0%    { transform:translate3d(-120px,0,0); opacity:0; }
-    2%    { opacity:0.9; }
-    11%   { opacity:0.9; }
-    13.3% { transform:translate3d(322px,0,0); opacity:0; } /* ~1.2s sweep */
-    100%  { transform:translate3d(322px,0,0); opacity:0; }
   }
 
-  /* ---------- HEADER ---------- */
-  .hdr { position:relative; display:flex; align-items:center; gap:11px; }
+  .rail { position:relative; flex-shrink:0; display:flex; flex-direction:column; justify-content:center; padding:0 40px; }
+  .rail-left { width: 340px; align-items:flex-start; gap:18px; }
+  .rail-right { width: 340px; align-items:flex-end; text-align:right; }
 
-  /* B1: the old `mascot-glow` animated box-shadow every frame (constant
-     repaint). Now: a static ring on .mascot + a pre-blurred radial glow
-     layer BEHIND it (.mascot-glow) that breathes via opacity only. */
-  .mascot-wrap { position:relative; flex-shrink:0; width:48px; height:48px; }
-  .mascot-glow {
-    position:absolute; inset:-13px; border-radius:50%; pointer-events:none;
-    background: radial-gradient(circle, rgba(214,242,36,0.38) 0%, rgba(214,242,36,0.14) 42%, transparent 68%);
+  .hero { position:relative; flex:1 1 auto; overflow:hidden; }
+  .hero-state {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; justify-content:center;
+    padding: 0 24px;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.6s ease;
     will-change: opacity;
-    animation: glow-breathe 3.8s ease-in-out infinite;
   }
-  @keyframes glow-breathe { 0%,100%{opacity:0.5;} 50%{opacity:1;} }
-  .mascot {
-    position:relative; width:48px; height:48px; border-radius:15px;
-    overflow:hidden;
-    box-shadow: 0 0 0 1.5px rgba(214,242,36,0.42), 0 0 18px rgba(214,242,36,0.22); /* static */
-  }
-  /* B4: sale-beat reaction — quick tilt-bounce, transform only */
-  .mascot.react { animation: mascot-react 0.26s cubic-bezier(0.34,1.56,0.64,1) both; }
-  @keyframes mascot-react {
-    0%   { transform: rotate(0deg) scale(1); }
-    28%  { transform: rotate(-6deg) scale(1.09); }
-    62%  { transform: rotate(6deg) scale(1.05); }
-    100% { transform: rotate(0deg) scale(1); }
-  }
-  .mascot img { width:100%; height:100%; object-fit:cover; display:block; transform: scale(1.06); }
-  .mascot-status {
-    position:absolute; right:-2px; bottom:-2px; z-index:2;
-    width:13px; height:13px; border-radius:50%;
-    background: var(--lime); border:2.5px solid var(--ink);
-    box-shadow: 0 0 8px rgba(214,242,36,0.85); /* static */
-    animation: dot-pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes dot-pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.82);} }
+  .hero-state.is-active { opacity:1; pointer-events:auto; }
 
-  .wm-col { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
-  .wm-row { display:flex; align-items:baseline; gap:6px; }
-  .wm-restackd { font-size:12px; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; color:var(--w-75); }
-  .wm-neo { font-size:19px; font-weight:900; letter-spacing:-0.01em; color:var(--cream); }
-  .live-row { display:flex; align-items:center; gap:5px; }
-  .live-dot { width:6px; height:6px; border-radius:50%; background:var(--lime); box-shadow:0 0 6px rgba(214,242,36,0.9); animation: dot-pulse 1.6s ease-in-out infinite; }
-  .live-label { font-size:10.5px; font-weight:700; letter-spacing:0.11em; text-transform:uppercase; color:var(--w-50); }
-
-  .r-mark { flex-shrink:0; width:15px; height:15px; opacity:0.32; }
-
-  /* ---------- DIVIDER ---------- */
-  .divider { height:1px; background:var(--w-12); margin:13px 0 12px; }
-
-  /* ---------- COUNT — B2: per-digit odometer ----------
-     Each digit lives in its own clipped 1ch cell; on change ONLY the
-     changed digits roll (old slides up/out, new slides in from below).
-     The old count text-shadow is replaced by .count-glow, a static
-     pre-blurred underlay — per-cell overflow clipping would band a
-     text-shadow, and a static layer costs nothing per frame. */
-  .count-wrap { text-align:center; position:relative; }
-  .count-glow {
-    position:absolute; left:50%; top:-8px; width:180px; height:64px;
-    transform:translateX(-50%); pointer-events:none;
-    background: radial-gradient(ellipse 50% 50% at center, rgba(214,242,36,0.22) 0%, transparent 70%);
-  }
-  .count-num {
-    position:relative;
-    font-size:53px; font-weight:900; letter-spacing:-0.03em; line-height:0.95;
-    color:var(--lime);
-    font-variant-numeric: tabular-nums; display:inline-block;
-    white-space:nowrap;
-  }
-  .d-cell { position:relative; display:inline-block; width:1ch; overflow:hidden; }
-  .d-val { display:inline-block; width:100%; text-align:center; }
-  .d-val.d-in { animation: dig-in 0.45s cubic-bezier(0.16,1,0.3,1) both; }
-  .d-out { position:absolute; left:0; top:0; width:100%; text-align:center; animation: dig-out 0.45s cubic-bezier(0.16,1,0.3,1) both; }
-  @keyframes dig-in  { 0%{transform:translate3d(0,105%,0);opacity:0;} 100%{transform:translate3d(0,0,0);opacity:1;} }
-  @keyframes dig-out { 0%{transform:translate3d(0,0,0);opacity:1;} 100%{transform:translate3d(0,-105%,0);opacity:0;} }
-  .count-label { margin-top:3px; font-size:12px; font-weight:600; color:var(--w-75); }
-
-  /* ---------- B3: "+1" chip — pops off the number, rises + fades.
-     One element, transform + opacity only. JS anchors it to the live
-     right edge of the number at fire time. ---------- */
-  .plus-chip {
-    position:absolute; left:50%; top:0; z-index:6; pointer-events:none;
-    background:var(--lime); color:var(--ink);
-    font-size:11.5px; font-weight:800; letter-spacing:0.02em;
-    padding:2.5px 7px; border-radius:999px;
-    box-shadow:0 2px 10px rgba(214,242,36,0.35); /* static */
-    opacity:0; transform:translate3d(-30%,3px,0) scale(0.5);
-    will-change: transform, opacity;
-  }
-  .plus-chip.go { animation: chip-pop 0.62s cubic-bezier(0.16,1,0.3,1) both; }
-  @keyframes chip-pop {
-    0%   { opacity:0; transform:translate3d(-30%,3px,0) scale(0.5); }
-    16%  { opacity:1; transform:translate3d(-30%,-3px,0) scale(1.14); }
-    40%  { opacity:1; transform:translate3d(-30%,-10px,0) scale(1.02); }
-    100% { opacity:0; transform:translate3d(-30%,-24px,0) scale(1.02); }
+  .mascot-wrap { position:relative; width:96px; height:96px; }
+  .mascot { width:96px; height:96px; border-radius:24px; object-fit:cover; }
+  .brand { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
+  .brand .logo { height:34px; width:auto; }
+  .live-pill {
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:15px; font-weight:800; letter-spacing:0.04em; color:var(--lime);
+    background: rgba(214,242,36,0.12); border:1px solid rgba(214,242,36,0.4);
+    border-radius:999px; padding:4px 12px;
   }
 
-  /* ---------- BUYER FLASH (B5: name auto-fits 14px → 11px floor) ---------- */
-  .buyer-flash {
-    margin-top:11px; display:flex; align-items:center; justify-content:center; gap:7px;
-    padding:8px 12px; border-radius:12px;
-    background:rgba(214,242,36,0.08); border:1px solid rgba(214,242,36,0.26);
-    min-height:34px;
+  .cta { display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
+  .cta-label {
+    display:inline-flex; align-items:center; gap:8px;
+    font-size:22px; font-weight:900; color:var(--ink);
+    background:var(--lime); border-radius:999px; padding:10px 20px;
   }
-  .buyer-flash-dot { width:7px; height:7px; border-radius:50%; background:var(--lime); flex-shrink:0; box-shadow:0 0 7px rgba(214,242,36,0.8); }
-  .buyer-name { font-size:14px; font-weight:700; color:var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:175px; }
-  .buyer-suffix { font-size:12.5px; font-weight:500; color:var(--w-50); white-space:nowrap; }
-  .buyer-flash.enter { animation: buyer-slide 0.45s cubic-bezier(0.16,1,0.3,1) both; } /* retimed: fires at t≈250ms of the beat */
-  @keyframes buyer-slide { 0%{opacity:0;transform:translate3d(0,8px,0);} 100%{opacity:1;transform:translate3d(0,0,0);} }
+  .cta-url { font-size:17px; font-weight:600; color:var(--w-75); }
 
-  /* ---------- SHIMMER + confetti (contained) ---------- */
-  .shimmer {
-    position:absolute; inset:0; z-index:5; pointer-events:none;
-    background: linear-gradient(100deg, transparent 40%, rgba(214,242,36,0.15) 50%, transparent 60%);
-    transform: translateX(-140%); opacity:0;
-    will-change: transform, opacity;
-  }
-  .shimmer.go { animation: shimmer-sweep 0.9s cubic-bezier(0.4,0,0.2,1); }
-  @keyframes shimmer-sweep { 0%{transform:translateX(-140%);opacity:0;} 15%{opacity:1;} 100%{transform:translateX(140%);opacity:0;} }
-  .confetti { position:absolute; inset:0; pointer-events:none; z-index:6; }
-
-  .conn { position:absolute; bottom:5px; right:9px; z-index:7; font-family:monospace; font-size:8px; color:rgba(250,251,247,0.24); letter-spacing:0.04em; text-transform:uppercase; }
-  .conn.offline { color:rgba(255,107,107,0.6); }
-
-  @media (prefers-reduced-motion: reduce) {
-    .card::before, .mascot-glow, .mascot-status, .live-dot, .buyer-flash-dot, .edge-light { animation:none !important; }
-    .edge-light { opacity:0 !important; }
-    /* JS also gates: mascot react, +1 chip, shimmer, confetti, digit
-       rolls and the buyer slide — reduced motion = plain swaps. */
-  }
+  .conn { position:absolute; bottom:10px; left:16px; font-size:12px; font-weight:700; color:var(--w-50); opacity:0; }
+  .conn.offline { opacity:1; }
 </style>
 </head>
 <body>
-<div class="card" id="card">
-  <canvas class="confetti" id="confetti"></canvas>
-  <div class="shimmer" id="shimmer"></div>
-  <div class="edge-light" aria-hidden="true"></div>
-
-  <div class="hdr">
-    <div class="mascot-wrap">
-      <span class="mascot-glow" aria-hidden="true"></span>
-      <div class="mascot" id="mascot"><img src="assets/neo-mascot-cropped.png" alt="Neo" /></div>
+<div class="banner" id="banner">
+  <div class="rail rail-left">
+    <div class="mascot-wrap"><img class="mascot" id="mascot" src="assets/neo-mascot-cropped.png" alt=""></div>
+    <div class="brand">
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
+        <title>Restackd — Wordmark (White)</title>
+        <text x="0" y="60" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="64" font-weight="800" fill="#FFFFFF" letter-spacing="-2.5">restackd</text>
+      </svg>
+      <span class="live-pill"><span>●</span> LIVE</span>
     </div>
-    <div class="wm-col">
-      <div class="wm-row">
-        <span class="wm-restackd">Restackd</span>
-        <span class="wm-neo">Neo</span>
-      </div>
-      <div class="live-row"><span class="live-dot"></span><span class="live-label">Live</span></div>
-    </div>
-    <svg class="r-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-      <g transform="translate(0,2)">
-        <rect x="0" y="0" width="64" height="16" rx="2.5" fill="#D6F224"/>
-        <rect x="0" y="22" width="64" height="16" rx="2.5" fill="#F5F5F5"/>
-        <rect x="0" y="44" width="34" height="16" rx="2.5" fill="#7A7C80"/>
-        <rect x="42" y="44" width="22" height="16" rx="2.5" fill="#7A7C80"/>
-      </g>
-    </svg>
   </div>
 
-  <div class="divider"></div>
-
-  <div class="count-wrap" id="countWrap">
-    <span class="count-glow" aria-hidden="true"></span>
-    <span class="count-num" id="countNum">0</span>
-    <span class="plus-chip" id="plusChip" aria-hidden="true">+1</span>
-    <div class="count-label">creators Neo is coaching right now</div>
+  <div class="hero" id="hero">
+    <section class="hero-state" data-state="testimonial"></section>
+    <section class="hero-state" data-state="live"></section>
+    <section class="hero-state" data-state="bnpl"></section>
+    <section class="hero-state" data-state="features"></section>
+    <section class="hero-state" data-state="burst"></section>
+    <section class="hero-state" data-state="empty"></section>
+    <section class="hero-state" data-state="offline"></section>
   </div>
 
-  <div class="buyer-flash" id="buyerFlash">
-    <span class="buyer-flash-dot"></span>
-    <span class="buyer-name" id="buyerName">Loading…</span>
-    <span class="buyer-suffix">just joined</span>
+  <div class="rail rail-right">
+    <div class="cta">
+      <span class="cta-label">LINK IN BIO →</span>
+      <span class="cta-url">stan.store/startwithjake</span>
+    </div>
   </div>
 
   <span class="conn" id="conn"></span>
@@ -271,258 +105,23 @@
 
 <script>
 (() => {
-  const API_BASE='https://restackd.com', TICKER='/api/founding/ticker', SSE='/api/overlay/stream';
-  const POLL_MS = 3000;
+  const $hero = document.getElementById('hero');
+  const heroStates = Array.from($hero.querySelectorAll('.hero-state'));
+  let activeState = null;
 
-  const $card=document.getElementById('card'), $confetti=document.getElementById('confetti');
-  const $shimmer=document.getElementById('shimmer'), $mascot=document.getElementById('mascot');
-  const $countNum=document.getElementById('countNum'), $buyerFlash=document.getElementById('buyerFlash');
-  const $buyerName=document.getElementById('buyerName'), $conn=document.getElementById('conn');
-  const $countWrap=document.getElementById('countWrap'), $plusChip=document.getElementById('plusChip');
-
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let lastSeenId = null, currentCount = 0;
-
-  const cap = s => !s ? '' : s.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
-
-  function realTotal(entries, realCount) {
-    const top = entries && entries[0];
-    if (top && typeof top.position === 'number' && top.position > 0) return top.position;
-    return realCount || 0;
-  }
-
-  /* ---------- B2: per-digit odometer ----------
-     Digits render as individual clipped cells; on change only the
-     changed digits roll. Handles digit-count growth (99 -> 100) by
-     rebuilding cells then rolling every changed slot. */
-  const ROLL_MS = 450;
-  let shownStr = null;
-
-  function makeCell(d) {
-    const cell = document.createElement('span');
-    cell.className = 'd-cell';
-    const val = document.createElement('span');
-    val.className = 'd-val';
-    val.textContent = d;
-    cell.appendChild(val);
-    return cell;
-  }
-
-  function setDigitsInstant(str) {
-    $countNum.textContent = '';
-    for (const ch of str) $countNum.appendChild(makeCell(ch));
-    shownStr = str;
-  }
-
-  function rollCell(cell, oldD, newD) {
-    // finalize any in-flight roll on this cell before starting a new one
-    cell.querySelectorAll('.d-out').forEach(n => n.remove());
-    const val = cell.querySelector('.d-val');
-    val.classList.remove('d-in');
-    if (oldD) {
-      const out = document.createElement('span');
-      out.className = 'd-out';
-      out.textContent = oldD;
-      cell.appendChild(out);
-      setTimeout(() => out.remove(), ROLL_MS + 80);
-    }
-    void val.offsetWidth;
-    val.textContent = newD;
-    val.classList.add('d-in');
-    setTimeout(() => val.classList.remove('d-in'), ROLL_MS + 80);
-  }
-
-  function renderCount(n, animate) {
-    const v = String(Math.max(0, n));
-    if (shownStr === v) return;
-    const prev = shownStr;
-    const doAnim = animate && !reduceMotion && prev !== null;
-
-    if (!doAnim) { setDigitsInstant(v); return; }
-
-    if (prev.length !== v.length) {
-      // digit-count changed (99 -> 100): rebuild, then roll every changed slot
-      const prevPad = prev.length < v.length
-        ? prev.padStart(v.length, ' ')
-        : prev.slice(prev.length - v.length);
-      setDigitsInstant(v);
-      const cells = $countNum.children;
-      for (let i = 0; i < v.length; i++) {
-        if (prevPad[i] !== v[i]) rollCell(cells[i], prevPad[i] === ' ' ? '' : prevPad[i], v[i]);
-      }
-      return;
-    }
-
-    const cells = $countNum.children;
-    for (let i = 0; i < v.length; i++) {
-      if (prev[i] !== v[i]) rollCell(cells[i], prev[i], v[i]);
-    }
-    shownStr = v;
-  }
-
-  /* ---------- B5: buyer-name auto-fit (14px -> 11px floor, then ellipsis) ---------- */
-  function fitBuyerName() {
-    $buyerName.style.fontSize = '';
-    let size = 14;
-    while (size > 11 && $buyerName.scrollWidth > $buyerName.clientWidth) {
-      size -= 0.5;
-      $buyerName.style.fontSize = size + 'px';
+  function showState(name) {
+    activeState = name;
+    for (const el of heroStates) {
+      el.classList.toggle('is-active', el.dataset.state === name);
     }
   }
 
-  function renderBuyer(name, animate) {
-    $buyerFlash.classList.remove('enter'); void $buyerFlash.offsetWidth;
-    $buyerName.textContent = cap(name);
-    fitBuyerName();
-    if (animate && !reduceMotion) $buyerFlash.classList.add('enter');
-  }
+  window.__testHooks = {
+    showState,
+    get activeState() { return activeState; },
+  };
 
-  function fireShimmer() {
-    if (reduceMotion) return;
-    $shimmer.classList.remove('go'); void $shimmer.offsetWidth; $shimmer.classList.add('go');
-  }
-
-  /* ---------- B3: "+1" chip — anchored to the number's live right edge ---------- */
-  function fireChip() {
-    if (reduceMotion) return;
-    const wrapR = $countWrap.getBoundingClientRect();
-    const numR = $countNum.getBoundingClientRect();
-    $plusChip.style.left = (numR.right - wrapR.left - 4) + 'px';
-    $plusChip.style.top = (numR.top - wrapR.top - 6) + 'px';
-    $plusChip.classList.remove('go'); void $plusChip.offsetWidth; $plusChip.classList.add('go');
-  }
-
-  /* ---------- B4: mascot tilt-bounce reaction ---------- */
-  let mascotTimer = 0;
-  function mascotReact() {
-    if (reduceMotion) return;
-    $mascot.classList.remove('react'); void $mascot.offsetWidth; $mascot.classList.add('react');
-    clearTimeout(mascotTimer);
-    mascotTimer = setTimeout(() => $mascot.classList.remove('react'), 320);
-  }
-
-  let cw=0, ch=0, ctx=null, raf=0;
-  const parts = [];
-  function sizeConfetti() {
-    cw = $card.clientWidth; ch = $card.clientHeight;
-    const dpr = Math.min(window.devicePixelRatio||1, 2);
-    $confetti.width = cw*dpr; $confetti.height = ch*dpr;
-    $confetti.style.width = cw+'px'; $confetti.style.height = ch+'px';
-    ctx = $confetti.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  function burst() {
-    if (reduceMotion) return;
-    if (cw===0) sizeConfetti();
-    const colors = ['#D6F224','#DFF584','#FAFBF7'];
-    const ox = cw*0.18, oy = 40;
-    for (let i=0;i<18;i++){
-      const a = Math.random()*Math.PI*2, sp = 2.5+Math.random()*4;
-      parts.push({ x:ox+(Math.random()*16-8), y:oy, vx:Math.cos(a)*sp*0.6, vy:Math.sin(a)*sp*0.6-2.5,
-        rot:Math.random()*6.28, vr:(Math.random()-0.5)*0.35, size:3.5+Math.random()*3.5,
-        color: colors[(Math.random()*colors.length)|0], life:1 });
-    }
-    if (!raf) raf = requestAnimationFrame(tick);
-  }
-  function tick() {
-    ctx.clearRect(0,0,cw,ch);
-    const g=0.3, d=0.99;
-    for (let i=parts.length-1;i>=0;i--){
-      const p=parts[i]; p.vy+=g; p.vx*=d; p.x+=p.vx; p.y+=p.vy; p.rot+=p.vr; p.life-=0.014;
-      if (p.life<=0 || p.y>ch+10) { parts.splice(i,1); continue; }
-      ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rot);
-      ctx.globalAlpha = Math.max(0,Math.min(1,p.life)); ctx.fillStyle = p.color;
-      ctx.fillRect(-p.size/2,-p.size*0.2,p.size,p.size*0.4);
-      ctx.restore();
-    }
-    raf = parts.length>0 ? requestAnimationFrame(tick) : 0;
-  }
-
-  /* ---------- B4: the sale beat (~1.4s), one crafted moment ----------
-     t=0: broadcast to celebrate.html so both sources open the beat
-     together, then mascot reaction + "+1" chip + shimmer + confetti.
-     t≈80ms: odometer rolls. t≈250ms: buyer flash slides in. */
-  let beatT1 = 0, beatT2 = 0;
-  function onNewSale(name, total) {
-    // notify the sibling celebrate.html source (if it's listening) via
-    // BroadcastChannel — safe no-op when nothing is subscribed.
-    try { new BroadcastChannel('neo-overlay').postMessage({ type:'sale', name, total }); } catch {}
-    mascotReact();
-    fireChip();
-    fireShimmer();
-    burst();
-    clearTimeout(beatT1);
-    beatT1 = setTimeout(() => renderCount(total, true), 80);
-    clearTimeout(beatT2);
-    beatT2 = setTimeout(() => renderBuyer(name, true), 250);
-  }
-
-  function applyTicker(entries, realCount) {
-    if (!Array.isArray(entries) || entries.length === 0) return;
-    const top = entries[0];
-    const id = `${top.position ?? ''}-${top.name}`;
-    const total = realTotal(entries, realCount);
-    const first = lastSeenId === null;
-    const isNew = id !== lastSeenId;
-    lastSeenId = id;
-    currentCount = total;
-    if (first) { renderCount(total, false); renderBuyer(top.name, false); }
-    else if (isNew) { onNewSale(top.name, total); }
-  }
-
-  function markConn(s) {
-    if (s === 'offline') { $conn.textContent = '● offline'; $conn.classList.add('offline'); }
-    else { $conn.textContent = ''; $conn.classList.remove('offline'); }
-  }
-
-  async function poll() {
-    try {
-      const r = await fetch(`${API_BASE}${TICKER}`, { cache:'no-store', mode:'cors' });
-      if (r.ok) { const d = await r.json(); applyTicker(d.entries, d.realCount); markConn('ok'); }
-      else markConn('offline');
-    } catch { markConn('offline'); }
-  }
-
-  let es = null;
-  function openSSE() {
-    try {
-      es = new EventSource(`${API_BASE}${SSE}`);
-      es.addEventListener('message', ev => {
-        try {
-          const p = JSON.parse(ev.data);
-          if (p?.name) {
-            const estimated = typeof p.position === 'number' && p.position > 0 ? p.position : currentCount + 1;
-            const id = `${p.position ?? 'sse'}-${p.name}`;
-            if (id !== lastSeenId) { lastSeenId = id; currentCount = estimated; onNewSale(p.name, estimated); }
-          }
-        } catch {}
-      });
-      es.addEventListener('error', () => { if (es && es.readyState === EventSource.CLOSED) { es.close(); es = null; setTimeout(openSSE, 4000); } });
-    } catch {}
-  }
-
-  setDigitsInstant('0');
-  sizeConfetti();
-  window.addEventListener('resize', sizeConfetti, { passive:true });
-  poll(); setInterval(poll, POLL_MS); openSSE();
-
-  /* ?demo=<name> fires one fake sale at t+1500ms (preserved behavior).
-     ?loop=1&demo=1 (QA aid) re-fires every 6.5s with rotating fake
-     names and an incrementing count. */
-  try {
-    const qp = new URLSearchParams(location.search);
-    if (qp.has('demo')) {
-      const raw = qp.get('demo');
-      const demoName = (raw && raw !== '1' && raw !== 'true') ? raw : 'Jordan';
-      let demoCount = 0;
-      const fire = nm => { demoCount = (demoCount || currentCount || 148) + 1; onNewSale(nm, demoCount); };
-      setTimeout(() => fire(demoName), 1500);
-      if (qp.has('loop')) {
-        const names = ['Maya','Chris','Alexis','Sam','Priya','Diego','Nina','Christopher Alexander'];
-        let i = 0;
-        setInterval(() => fire(names[i++ % names.length]), 6500);
-      }
-    }
-  } catch {}
+  showState('testimonial');
 })();
 </script>
 </body>
