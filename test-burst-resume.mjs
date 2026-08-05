@@ -50,7 +50,6 @@ const spotsNum = await page.evaluate(() => document.getElementById('spotsNum').t
 const pass = duringBurst === 'burst' && afterBurst !== 'burst' && spotsNum === '6';
 console.log({ duringBurst, afterBurst, spotsNum });
 console.log(pass ? 'PASS' : 'FAIL');
-process.exit(pass ? 0 : 1);
-
 await ctx.close();
 await browser.close();
+process.exit(pass ? 0 : 1);

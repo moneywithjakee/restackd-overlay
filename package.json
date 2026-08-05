@@ -4,7 +4,8 @@
   "private": true,
   "description": "Standalone live overlay for Restackd TikTok streams. No build, edit + push.",
   "scripts": {
-    "preview": "node snap-preview.mjs"
+    "preview": "node verify.mjs --state=testimonial --out=out/preview.png",
+    "test": "node test-rotation.mjs && node test-burst-resume.mjs"
   },
   "devDependencies": {
     "playwright": "^1.59.1"

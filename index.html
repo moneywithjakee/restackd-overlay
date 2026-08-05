@@ -1,529 +1,548 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Restackd Neo — Live Overlay</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="image" href="assets/neo-mascot-cropped.png">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800;900&family=Plus+Jakarta+Sans:wght@800&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --lime: #D6F224;
-    --lime-dim: rgba(214,242,36,0.55);
-    --ink: #13150E;
-    --ink-2: #1B1D14;
-    --cream: #FAFBF7;
-    --w-75: rgba(250,251,247,0.75);
-    --w-50: rgba(250,251,247,0.50);
-    --w-12: rgba(250,251,247,0.12);
-    --red: #FF4D4D;
-  }
-  * { margin:0; padding:0; box-sizing:border-box; -webkit-font-smoothing:antialiased; }
-  html,body { background:transparent; overflow:hidden; width:2000px; height:750px; }
-  body { font-family:'Inter',system-ui,-apple-system,sans-serif; }
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Restackd Neo — TikTok LIVE overlay</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wdth,wght@75..100,500..800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --carbon: #111318;
+      --carbon-2: #1b1e25;
+      --paper: #f8fafd;
+      --panel: #ffffff;
+      --cool: #eef2f7;
+      --line: #dbe2eb;
+      --muted: #667085;
+      --core-blue: #4353f5;
+      --core-blue-dark: #3543d9;
+      --neo: #9687ef;
+      --neo-soft: #e4dfff;
+      --coral: #ff6b57;
+      --success: #17875f;
+      --display: "Instrument Sans", sans-serif;
+      --body: "Inter", sans-serif;
+      --mono: "DM Mono", monospace;
+      --fast: 150ms;
+      --normal: 250ms;
+      --slow: 420ms;
+      --ease: cubic-bezier(.2, .8, .2, 1);
+    }
 
-  .banner {
-    position: relative;
-    width: 2000px; height: 750px;
-    display: flex;
-    background: linear-gradient(160deg, var(--ink) 0%, var(--ink-2) 100%);
-    overflow: hidden;
-  }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: transparent; }
+    body { color: var(--carbon); font-family: var(--body); -webkit-font-smoothing: antialiased; }
 
-  .rail { position:relative; flex-shrink:0; display:flex; flex-direction:column; justify-content:center; padding:0 40px; }
-  .rail-left { width: 340px; align-items:flex-start; gap:18px; }
-  .rail-right { width: 340px; align-items:flex-end; text-align:right; }
+    .banner {
+      position: relative;
+      display: grid;
+      grid-template-columns: 330px minmax(0, 1fr) 430px;
+      width: 2000px;
+      height: 750px;
+      overflow: hidden;
+      background: var(--paper);
+      border: 3px solid var(--carbon);
+      isolation: isolate;
+    }
 
-  .hero { position:relative; flex:1 1 auto; overflow:hidden; }
-  .hero-state {
-    position:absolute; inset:0;
-    display:flex; flex-direction:column; justify-content:center;
-    padding: 0 24px;
-    opacity:0; pointer-events:none;
-    transition: opacity 0.6s ease;
-    will-change: opacity;
-  }
-  .hero-state.is-active { opacity:1; pointer-events:auto; }
+    .banner::before {
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      content: "";
+      opacity: .42;
+      background-image:
+        linear-gradient(90deg, rgba(17,19,24,.045) 1px, transparent 1px),
+        linear-gradient(rgba(17,19,24,.045) 1px, transparent 1px);
+      background-size: 40px 40px;
+      mask-image: linear-gradient(90deg, transparent 17%, #000 48%, transparent 86%);
+    }
 
-  .mascot-wrap { position:relative; width:96px; height:96px; }
-  .mascot { width:96px; height:96px; border-radius:24px; object-fit:cover; }
-  .brand { display:flex; flex-direction:column; align-items:flex-start; gap:8px; }
-  .brand .logo { height:34px; width:auto; }
-  .live-pill {
-    display:inline-flex; align-items:center; gap:6px;
-    font-size:15px; font-weight:800; letter-spacing:0.04em; color:var(--lime);
-    background: rgba(214,242,36,0.12); border:1px solid rgba(214,242,36,0.4);
-    border-radius:999px; padding:4px 12px;
-  }
+    .identity {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      padding: 38px 30px 32px;
+      color: var(--paper);
+      background: var(--carbon);
+      border-right: 3px solid var(--carbon);
+    }
 
-  .cta { display:flex; flex-direction:column; gap:10px; align-items:flex-end; }
-  .cta-label {
-    display:inline-flex; align-items:center; gap:8px;
-    font-size:22px; font-weight:900; color:var(--ink);
-    background:var(--lime); border-radius:999px; padding:10px 20px;
-  }
-  .cta-url { font-size:17px; font-weight:600; color:var(--w-75); }
+    .brand-lockup { display: block; width: 244px; height: auto; }
 
-  .conn { position:absolute; bottom:10px; left:16px; font-size:12px; font-weight:700; color:var(--w-50); opacity:0; }
-  .conn.offline { opacity:1; }
+    .product-tag {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      margin-top: 34px;
+      font-family: var(--display);
+      font-size: 38px;
+      font-weight: 720;
+      letter-spacing: -.03em;
+    }
 
-  .testi { max-width: 1180px; }
-  .testi-quote {
-    font-size: 46px; font-weight: 900; line-height: 1.15; color: var(--cream);
-    letter-spacing: -0.01em;
-  }
-  .testi-line { display:block; font-size: 32px; font-weight: 800; color: var(--w-75); margin: 4px 0; }
-  .testi-arrow { color: var(--lime); margin-right: 6px; }
-  .testi-highlight { display:block; color: var(--lime); font-size: 58px; margin: 6px 0; }
-  .testi-sub {
-    display:inline-block; margin-top: 18px;
-    font-size: 18px; font-weight: 700; color: var(--ink);
-    background: var(--lime); padding: 8px 16px; border-radius: 6px;
-  }
+    .product-dot { width: 17px; height: 17px; background: var(--neo); }
 
-  .live-block { display:flex; flex-direction:column; gap:22px; }
-  .live-num-row { display:flex; align-items:baseline; gap:20px; }
-  .live-num { font-size: 130px; font-weight: 900; color: var(--lime); line-height:1; text-shadow: 0 0 40px rgba(214,242,36,0.35); }
-  .live-num-label { display:flex; flex-direction:column; gap:4px; }
-  .live-num-label span:first-child { font-size: 26px; font-weight: 800; color: var(--cream); letter-spacing:0.02em; }
-  .live-sold { font-size: 17px; font-weight: 700; color: var(--w-50); }
+    .live-row { display: flex; align-items: center; gap: 12px; margin-top: 22px; }
+    .live-chip,
+    .connection {
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+    }
 
-  .buyer-flash {
-    display:inline-flex; align-items:center; gap:12px; align-self:flex-start;
-    background: rgba(214,242,36,0.08); border:1px solid rgba(214,242,36,0.35); border-radius:14px;
-    padding: 12px 20px; max-width: 640px;
-    opacity:0; transform: translateY(6px);
-    transition: opacity 0.4s ease, transform 0.4s ease;
-  }
-  .buyer-flash.enter { opacity:1; transform:none; }
-  .buyer-flash-dot { width:9px; height:9px; border-radius:50%; background:var(--lime); box-shadow:0 0 8px rgba(214,242,36,0.7); flex-shrink:0; }
-  .buyer-name { font-size: 22px; font-weight: 800; color: var(--cream); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .buyer-suffix { font-size: 15px; font-weight: 600; color: var(--w-50); flex-shrink:0; }
+    .live-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 10px 12px;
+      color: var(--paper);
+      background: var(--coral);
+    }
 
-  .banner.is-urgent .live-num { color: var(--red); text-shadow: 0 0 40px rgba(255,77,77,0.4); }
-  .banner.is-urgent .live-pill { color: var(--red); background: rgba(255,77,77,0.12); border-color: rgba(255,77,77,0.4); }
-  .banner.is-urgent .live-pill span:first-child { animation: urgent-pulse 1.1s ease-in-out infinite; }
-  @keyframes urgent-pulse { 0%,100% { opacity:1; } 50% { opacity:0.35; } }
+    .live-chip::before { width: 9px; height: 9px; content: ""; background: currentColor; border-radius: 50%; }
+    .connection { min-height: 20px; color: #aab2c0; opacity: 0; }
+    .connection.offline { opacity: 1; }
 
-  .bnpl { display:flex; flex-direction:column; gap:14px; align-items:flex-start; }
-  .bnpl-hero { display:flex; align-items:baseline; gap:14px; }
-  .bnpl-amount { font-size: 120px; font-weight: 900; color: var(--lime); line-height:1; }
-  .bnpl-down { font-size: 30px; font-weight: 800; color: var(--cream); }
-  .bnpl-sub { font-size: 18px; font-weight: 700; color: var(--w-50); letter-spacing:0.06em; }
-  .bnpl-badges { display:flex; gap:12px; }
-  .bnpl-badge {
-    display:inline-flex; align-items:center; padding:10px 20px; border-radius:10px;
-    font-size:18px; font-weight:800;
-  }
-  .bnpl-badge--afterpay { background:#B2FCE4; color:#111; }
-  .bnpl-badge--klarna { background:#FFB3C7; color:#111; }
-  .bnpl-code {
-    display:flex; align-items:center; gap:16px; margin-top:6px;
-    border:2px solid var(--lime); border-radius:12px; padding:10px 22px;
-  }
-  .bnpl-code-label { font-size:20px; font-weight:800; color:var(--cream); }
-  .bnpl-code-label b { color:var(--lime); }
-  .bnpl-code-off { font-size:20px; font-weight:900; color:var(--ink); background:var(--lime); padding:6px 14px; border-radius:8px; }
+    .identity-statement {
+      max-width: 260px;
+      margin: auto 0 0;
+      font-family: var(--display);
+      font-size: 48px;
+      font-stretch: 90%;
+      font-weight: 650;
+      line-height: .98;
+      letter-spacing: -.048em;
+      text-wrap: balance;
+    }
 
-  .features { display:flex; gap:44px; align-items:center; flex-wrap:wrap; max-width: 1200px; }
-  .feature { display:flex; flex-direction:column; align-items:center; gap:10px; width:180px; text-align:center; }
-  .feature-icon { width:44px; height:44px; fill: var(--lime); }
-  .feature-icon--accent { fill: #B892FF; }
-  .feature span { font-size:16px; font-weight:800; color: var(--cream); line-height:1.3; }
+    .riser-key { display: grid; gap: 13px; margin-top: 31px; }
+    .riser-key span { display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: center; }
+    .riser-key b { font-family: var(--mono); font-size: 17px; font-weight: 500; letter-spacing: .08em; }
+    .riser-key i { display: block; height: 3px; background: #414650; transform-origin: left; }
+    .riser-key span.is-active i { background: var(--neo); transform: scaleX(1); }
+    .riser-key span:not(.is-active) i { transform: scaleX(.58); }
 
-  .burst { display:flex; flex-direction:column; gap:10px; align-items:flex-start; }
-  .burst-name { font-size: 84px; font-weight: 900; color: var(--lime); text-shadow: 0 0 40px rgba(214,242,36,0.4); }
-  .burst-sub { font-size: 24px; font-weight: 800; color: var(--cream); letter-spacing:0.03em; }
-  .confetti { position:absolute; inset:0; pointer-events:none; }
+    .stage { position: relative; min-width: 0; overflow: hidden; }
+    .stage-topline {
+      position: absolute;
+      top: 36px;
+      left: 50px;
+      right: 50px;
+      z-index: 3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
 
-  .empty-block { display:flex; flex-direction:column; gap:12px; }
-  .empty-title { font-size: 54px; font-weight: 900; color: var(--lime); }
-  .empty-sub { font-size: 18px; font-weight: 600; color: var(--w-50); }
+    .eyebrow,
+    .phase-count,
+    .utility {
+      font-family: var(--mono);
+      font-size: 19px;
+      font-weight: 500;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .eyebrow { color: var(--muted); }
+    .eyebrow strong { color: var(--carbon); font-weight: 500; }
+    .phase-count { color: var(--carbon); }
 
-  .mascot.react { animation: mascot-react 0.26s cubic-bezier(0.34,1.56,0.64,1) both; }
-  @keyframes mascot-react {
-    0%   { transform: rotate(0deg) scale(1); }
-    28%  { transform: rotate(-6deg) scale(1.09); }
-    62%  { transform: rotate(6deg) scale(1.05); }
-    100% { transform: rotate(0deg) scale(1); }
-  }
-</style>
+    .hero-state {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      align-content: center;
+      padding: 98px 50px 48px;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(20px);
+      transition: opacity var(--slow) var(--ease), transform var(--slow) var(--ease);
+    }
+
+    .hero-state.is-active { z-index: 2; opacity: 1; pointer-events: auto; transform: translateY(0); }
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.02fr) minmax(0, .98fr); gap: 46px; align-items: center; }
+
+    h1, h2, p { margin: 0; }
+    .display {
+      max-width: 700px;
+      font-family: var(--display);
+      font-size: 96px;
+      font-stretch: 88%;
+      font-weight: 760;
+      line-height: .91;
+      letter-spacing: -.066em;
+      text-wrap: balance;
+    }
+    .display em { color: var(--core-blue); font-style: normal; }
+    .lede { max-width: 620px; margin-top: 25px; color: #465165; font-size: 28px; font-weight: 500; line-height: 1.34; text-wrap: pretty; }
+
+    .coach-window {
+      position: relative;
+      padding: 32px;
+      background: var(--panel);
+      border: 2px solid var(--line);
+      box-shadow: 16px 18px 0 var(--neo-soft);
+      transform: rotate(-1deg);
+    }
+    .coach-window::before { position: absolute; top: -19px; right: 34px; width: 172px; height: 19px; content: ""; background: var(--neo); }
+    .window-head { display: flex; align-items: center; justify-content: space-between; padding-bottom: 22px; border-bottom: 2px solid var(--line); }
+    .window-head strong { display: flex; align-items: center; gap: 12px; font-size: 26px; }
+    .window-head strong::before { width: 12px; height: 12px; content: ""; background: var(--neo); }
+    .window-head span { color: var(--muted); font-family: var(--mono); font-size: 18px; letter-spacing: .03em; }
+    .prompt { margin-top: 22px; padding: 20px 22px; color: #394456; font-size: 25px; font-weight: 500; line-height: 1.3; background: var(--cool); }
+    .answer-row { display: grid; grid-template-columns: 46px 1fr auto; gap: 14px; align-items: center; margin-top: 14px; padding: 16px; background: var(--neo-soft); }
+    .neo-badge { display: grid; width: 46px; height: 46px; place-items: center; color: var(--carbon); background: var(--neo); font-family: var(--display); font-size: 20px; font-weight: 760; }
+    .answer-copy b, .answer-copy span { display: block; }
+    .answer-copy b { font-size: 23px; }
+    .answer-copy span { margin-top: 5px; color: #444b62; font-size: 18px; font-weight: 500; }
+    .answer-arrow { font-size: 30px; }
+    .mini-progress { display: grid; grid-template-columns: repeat(5, 1fr); gap: 7px; margin-top: 20px; }
+    .mini-progress i { height: 7px; background: var(--line); }
+    .mini-progress i:nth-child(-n+2) { background: var(--core-blue); }
+
+    .live-layout { grid-template-columns: 390px minmax(0, 1fr); gap: 46px; }
+    .spots-block { padding-right: 40px; border-right: 3px solid var(--line); }
+    .spots-number { font-family: var(--display); font-size: 268px; font-stretch: 82%; font-weight: 790; line-height: .68; letter-spacing: -.09em; font-variant-numeric: tabular-nums; }
+    .spots-label { margin-top: 30px; font-family: var(--mono); font-size: 25px; font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
+    .sold-line { margin-top: 16px; color: #515b6b; font-size: 24px; font-weight: 600; }
+    .is-urgent .spots-number { color: var(--coral); }
+    .buyer-proof { display: grid; gap: 22px; }
+    .buyer-kicker { color: var(--success); font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; }
+    .buyer-name { max-width: 700px; overflow: hidden; font-family: var(--display); font-size: 108px; font-weight: 760; line-height: .88; letter-spacing: -.06em; text-overflow: ellipsis; white-space: nowrap; }
+    .buyer-meta { color: #515b6b; font-size: 25px; font-weight: 500; }
+    .move-rail { display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 9px; height: 148px; margin-top: 7px; }
+    .move { display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; background: var(--cool); border-top: 5px solid var(--line); }
+    .move:nth-child(1) { min-height: 82px; }
+    .move:nth-child(2) { min-height: 110px; background: var(--neo-soft); border-color: var(--neo); }
+    .move:nth-child(3) { min-height: 140px; color: var(--paper); background: var(--core-blue); border-color: var(--core-blue); }
+    .move small { font-family: var(--mono); font-size: 16px; font-weight: 500; letter-spacing: .05em; }
+    .move b { margin-top: 7px; font-family: var(--display); font-size: 25px; line-height: 1.02; }
+
+    .academy-state { background: var(--cool); }
+    .academy-layout { grid-template-columns: .78fr 1.22fr; gap: 42px; }
+    .value-tag { display: inline-flex; gap: 12px; align-items: center; margin-bottom: 24px; color: var(--core-blue); font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+    .value-tag::before { width: 12px; height: 12px; content: ""; background: var(--core-blue); }
+    .path-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; align-items: stretch; }
+    .path-card { min-height: 202px; padding: 22px; background: var(--panel); border: 2px solid var(--line); }
+    .path-card:nth-child(2), .path-card:nth-child(5) { transform: none; }
+    .path-icon { display: grid; width: 50px; height: 50px; place-items: center; background: var(--neo-soft); font-family: var(--display); font-size: 18px; font-weight: 760; }
+    .path-card b { display: block; margin-top: 24px; font-family: var(--display); font-size: 28px; font-weight: 730; line-height: .98; letter-spacing: -.035em; }
+    .path-card small { display: block; margin-top: 11px; color: #515b6b; font-size: 18px; font-weight: 500; line-height: 1.25; }
+
+    .offer-layout { grid-template-columns: minmax(0, 1fr) 520px; gap: 46px; }
+    .offer-points { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 32px; margin-top: 30px; }
+    .offer-point { display: grid; grid-template-columns: 36px 1fr; gap: 13px; align-items: start; font-size: 24px; font-weight: 600; line-height: 1.18; }
+    .offer-point::before { display: grid; width: 34px; height: 34px; place-items: center; content: "✓"; color: var(--paper); background: var(--core-blue); font-size: 19px; font-weight: 700; }
+    .price-slab { position: relative; padding: 38px; color: var(--paper); background: var(--carbon); }
+    .price-slab::after { position: absolute; right: -3px; bottom: -3px; width: 145px; height: 68px; content: ""; background: linear-gradient(to top right, transparent 49%, var(--coral) 50%); }
+    .price-label { font-family: var(--mono); font-size: 20px; letter-spacing: .06em; text-transform: uppercase; }
+    .price { margin-top: 20px; font-family: var(--display); font-size: 150px; font-weight: 780; line-height: .75; letter-spacing: -.08em; }
+    .price sup { position: relative; top: -14px; margin-right: 7px; font-size: 48px; }
+    .lifetime { margin-top: 30px; color: #eef2f7; font-size: 27px; font-weight: 600; }
+    .access-strip { margin-top: 30px; padding: 20px; color: var(--carbon); background: var(--neo); font-family: var(--display); font-size: 28px; font-weight: 760; letter-spacing: -.02em; text-align: center; }
+
+    .burst-state { color: var(--paper); background: var(--carbon); }
+    .burst-state::after { position: absolute; right: 0; bottom: 0; width: 440px; height: 210px; content: ""; background: var(--coral); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+    .burst-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 180px 1fr; gap: 40px; align-items: center; }
+    .burst-mark { display: grid; width: 180px; height: 180px; place-items: center; background: var(--neo); }
+    .burst-mark svg { width: 115px; height: 115px; }
+    .burst-copy .utility { color: var(--neo); }
+    .burst-name { max-width: 850px; overflow: hidden; margin-top: 11px; font-family: var(--display); font-size: 132px; font-weight: 770; line-height: .82; letter-spacing: -.07em; text-overflow: ellipsis; white-space: nowrap; }
+    .burst-sub { margin-top: 28px; color: #eef2f7; font-size: 30px; font-weight: 600; }
+
+    .status-state { text-align: left; }
+    .status-state .display { max-width: 900px; }
+
+    .cta {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      padding: 40px 38px 34px;
+      color: var(--paper);
+      background: var(--core-blue);
+      border-left: 3px solid var(--carbon);
+    }
+    .cta::before { position: absolute; top: 0; left: 0; right: 0; height: 17px; content: ""; background: var(--neo); }
+    .cta-kicker { margin-top: 16px; font-family: var(--mono); font-size: 20px; font-weight: 500; letter-spacing: .07em; text-transform: uppercase; }
+    .cta-title { margin-top: 36px; font-family: var(--display); font-size: 76px; font-stretch: 88%; font-weight: 760; line-height: .86; letter-spacing: -.06em; }
+    .cta-sub { max-width: 335px; margin-top: 25px; color: #f0f2ff; font-size: 27px; font-weight: 500; line-height: 1.3; }
+    .cta-price { margin-top: auto; padding-top: 30px; border-top: 2px solid rgba(248,250,253,.35); }
+    .cta-price b { display: block; font-family: var(--display); font-size: 66px; line-height: 1; letter-spacing: -.05em; }
+    .cta-price span { display: block; margin-top: 10px; font-family: var(--mono); font-size: 18px; letter-spacing: .06em; text-transform: uppercase; }
+    .cta-link { margin-top: 28px; padding: 22px 12px; color: var(--carbon); background: var(--paper); font-family: var(--mono); font-size: 23px; font-weight: 500; letter-spacing: 0; text-align: center; }
+    .cta-arrow { margin-top: 23px; font-family: var(--display); font-size: 34px; font-weight: 740; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; transition-duration: 0ms !important; }
+    }
+  </style>
 </head>
 <body>
-<div class="banner" id="banner">
-  <div class="rail rail-left">
-    <div class="mascot-wrap"><img class="mascot" id="mascot" src="assets/neo-mascot-cropped.png" alt=""></div>
-    <div class="brand">
-      <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 80" width="360" height="80">
-        <title>Restackd — Wordmark (White)</title>
-        <text x="0" y="60" font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="64" font-weight="800" fill="#FFFFFF" letter-spacing="-2.5">restackd</text>
+  <main class="banner" id="banner" aria-label="Restackd Neo live stream banner">
+    <aside class="identity" aria-label="Restackd Neo identity">
+      <svg class="brand-lockup" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1137 256" role="img" aria-label="Restackd">
+        <g><path fill="#F8FAFD" d="M24 232V24h64v42c27-31 63-47 101-47 22 0 41 5 56 13l-27 64c-12-8-26-12-41-12-37 0-68 20-89 54v94H24Z"/><path fill="#FF6B57" d="M108 232v-48h40v-36h40v-36h44v120H108Z"/></g>
+        <path fill="#F8FAFD" d="M440 529V362H376Q314 362 286.5 330Q259 298 259 235V0H60V528H223L236 448Q254 494 293 517.5Q332 541 381 541Q404 541 422 535.5Q440 530 440 529Z" transform="translate(280 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M631 264V230H235Q235 173 260.5 144Q286 115 341 115Q391 115 414.5 136Q438 157 438 192H631Q631 96 558 42Q485-12 345-12Q198-12 117 56.5Q36 125 36 264Q36 400 115 470Q194 540 333 540Q478 540 554.5 472Q631 404 631 264ZM236 324H430Q430 365 406.5 389Q383 413 341 413Q247 413 236 324Z" transform="translate(354.36 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M564 370H379Q379 399 353 411Q335 421 308 421Q236 421 236 387Q236 368 261 360Q286 352 343 343Q413 333 460 319.5Q507 306 542 271.5Q577 237 577 175Q577 74 501.5 31Q426-12 304-12Q234-12 172 7.5Q110 27 71 68Q32 109 32 172H217V168Q218 134 245.5 120.5Q273 107 304 107Q387 107 387 146Q387 166 361 175Q335 184 276 194Q205 206 159.5 220Q114 234 80 267.5Q46 301 46 361Q46 458 119.5 499Q193 540 311 540Q417 540 490.5 498.5Q564 457 564 370Z" transform="translate(471.09 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M412 528V393H300V192Q300 156 312 139.5Q324 123 356 123H412V6Q388-2 350-7Q312-12 284-12Q196-12 148.5 20Q101 52 101 129V393H27V528H109L152 688H300V528Z" transform="translate(577.18 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M594 368V162Q594 145 602 134Q610 123 626 123H662V8Q659 6 646.5 1.5Q634-3 611-7.5Q588-12 558-12Q500-12 462.5 5.5Q425 23 411 54Q373 24 326 6Q279-12 216-12Q30-12 30 136Q30 213 71.5 253.5Q113 294 191 309Q269 324 395 324V350Q395 381 373.5 397Q352 413 318 413Q287 413 264.5 402Q242 391 242 367V363H46Q45 368 45 377Q45 452 116.5 496Q188 540 321 540Q442 540 518 499.5Q594 459 594 368ZM229 162Q229 112 297 112Q336 112 365.5 133Q395 154 395 185V230Q310 230 269.5 211.5Q229 193 229 162Z" transform="translate(651.54 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M624 315H431Q431 405 333 405Q235 405 235 292V235Q235 123 337 123Q439 123 439 215H624Q624 100 543.5 44Q463-12 333-12Q194-12 115 58Q36 128 36 264Q36 400 115 470Q194 540 333 540Q463 540 543.5 484.5Q624 429 624 315Z" transform="translate(768.27 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M428 528H660L465 315L665 0H439L328 181L259 114V0H60V726H259V326Z" transform="translate(885 202) scale(.19 -.19)"/><path fill="#F8FAFD" d="M444 0 427 75Q369-12 259-12Q152-12 94 58Q36 128 36 265Q36 401 94 470.5Q152 540 259 540Q350 540 407 479V725H606V0ZM235 290V237Q235 135 321 135Q365 135 387 166Q409 197 409 247V280Q409 330 387 361.5Q365 393 321 393Q235 393 235 290Z" transform="translate(1001.73 202) scale(.19 -.19)"/>
       </svg>
-      <span class="live-pill"><span>●</span> LIVE</span>
-    </div>
-  </div>
-
-  <div class="hero" id="hero">
-    <section class="hero-state" data-state="testimonial">
-      <div class="testi">
-        <p class="testi-quote">
-          “DAD OF 3
-          <span class="testi-line"><span class="testi-arrow">»</span> PAYCHECK TO PAYCHECK</span>
-          <span class="testi-line"><span class="testi-arrow">»</span> CORPORATE WORKER</span>
-          <span class="testi-highlight">TO $30K/MONTH</span>
-          FROM MY PHONE”
-        </p>
-        <p class="testi-sub">Now helping ordinary people build online income with NEO.</p>
+      <div class="product-tag"><span class="product-dot"></span>Neo</div>
+      <div class="live-row"><span class="live-chip">Live</span><span class="connection" id="connection">offline</span></div>
+      <p class="identity-statement">Everything should stack.</p>
+      <div class="riser-key" aria-label="Locate, lift, resolve">
+        <span class="is-active"><b>01</b><i></i></span><span><b>02</b><i></i></span><span><b>03</b><i></i></span>
       </div>
-    </section>
-    <section class="hero-state" data-state="live">
-      <div class="live-block">
-        <div class="live-num-row">
-          <span class="live-num" id="spotsNum">–</span>
-          <div class="live-num-label">
-            <span>SPOTS LEFT TODAY</span>
-            <span class="live-sold" id="soldToday">– sold today</span>
+    </aside>
+
+    <section class="stage" id="hero" aria-live="polite">
+      <header class="stage-topline">
+        <span class="eyebrow"><strong id="phaseLabel">Locate</strong> / your next useful move</span>
+        <span class="phase-count" id="phaseCount">01 / 04</span>
+      </header>
+
+      <section class="hero-state is-active" data-state="testimonial">
+        <div class="hero-grid">
+          <div>
+            <h1 class="display">Stop guessing. <em>Know what to do next.</em></h1>
+            <p class="lede">Tell Neo what you’re building. Get one clear direction, a practical plan, and progress you can see.</p>
+          </div>
+          <div class="coach-window" aria-label="Neo coaching preview">
+            <div class="window-head"><strong>Neo coaching</strong><span>Shared Restackd context</span></div>
+            <div class="prompt">What should I work on next?</div>
+            <div class="answer-row"><span class="neo-badge">N</span><span class="answer-copy"><b>Your next move</b><span>Build one clear offer before adding more.</span></span><span class="answer-arrow">→</span></div>
+            <div class="mini-progress" aria-label="2 of 5 steps complete"><i></i><i></i><i></i><i></i><i></i></div>
           </div>
         </div>
-        <div class="buyer-flash" id="buyerFlash">
-          <span class="buyer-flash-dot"></span>
-          <span class="buyer-name" id="buyerName">Loading…</span>
-          <span class="buyer-suffix">just joined · $249 Lifetime</span>
+      </section>
+
+      <section class="hero-state" data-state="live">
+        <div class="hero-grid live-layout">
+          <div class="spots-block"><div class="spots-number" id="spotsNum">7</div><div class="spots-label">spots left today</div><div class="sold-line"><strong id="soldToday">3</strong> builders joined today</div></div>
+          <div class="buyer-proof">
+            <div class="buyer-kicker">Just joined · lifetime access</div>
+            <div class="buyer-name" id="buyerName">Dario</div>
+            <div class="buyer-meta" id="buyerMeta">Neo + Restackd Academy · $249 once</div>
+            <div class="move-rail"><div class="move"><small>01 / Choose</small><b>Find the path.</b></div><div class="move"><small>02 / Plan</small><b>Turn it into steps.</b></div><div class="move"><small>03 / Launch</small><b>Keep moving.</b></div></div>
+          </div>
         </div>
-      </div>
+      </section>
+
+      <section class="hero-state academy-state" data-state="bnpl">
+        <div class="hero-grid academy-layout">
+          <div><div class="value-tag">$497 value included</div><h2 class="display">Neo tells you what. <em>Academy shows you how.</em></h2><p class="lede">Step-by-step training across the online-income paths people ask about most.</p></div>
+          <div class="path-grid" aria-label="Academy learning paths">
+            <article class="path-card"><span class="path-icon">01</span><b>Affiliate marketing</b><small>Build the offer and the system.</small></article>
+            <article class="path-card"><span class="path-icon">02</span><b>Digital products</b><small>Package what you know.</small></article>
+            <article class="path-card"><span class="path-icon">03</span><b>Personal brand</b><small>Turn attention into trust.</small></article>
+            <article class="path-card"><span class="path-icon">04</span><b>TikTok Shop</b><small>Learn content that converts.</small></article>
+            <article class="path-card"><span class="path-icon">05</span><b>UGC</b><small>Create work brands can use.</small></article>
+            <article class="path-card"><span class="path-icon">06</span><b>Creator systems</b><small>Keep the work moving.</small></article>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero-state" data-state="features">
+        <div class="hero-grid offer-layout">
+          <div><h2 class="display">A coach that <em>keeps up with you.</em></h2><div class="offer-points"><div class="offer-point">Personalized direction</div><div class="offer-point">Plans based on your goals</div><div class="offer-point">Strategy and feedback</div><div class="offer-point">Restackd Academy included</div><div class="offer-point">Ongoing guidance</div><div class="offer-point">Advanced generation with credits</div></div></div>
+          <aside class="price-slab"><div class="price-label">Neo + Restackd Academy</div><div class="price"><sup>$</sup>249</div><div class="lifetime">One payment · Lifetime access</div><div class="access-strip">PAY ONCE. KEEP IT.</div></aside>
+        </div>
+      </section>
+
+      <section class="hero-state burst-state" data-state="burst">
+        <div class="burst-wrap"><div class="burst-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" aria-hidden="true"><path fill="#111318" d="M24 232V24h64v42c27-31 63-47 101-47 22 0 41 5 56 13l-27 64c-12-8-26-12-41-12-37 0-68 20-89 54v94H24Z"/><path fill="#FF6B57" d="M108 232v-48h40v-36h40v-36h44v120H108Z"/></svg></div><div class="burst-copy"><div class="utility">A new builder just joined</div><div class="burst-name" id="burstName">Dario</div><div class="burst-sub">Neo + Restackd Academy · Lifetime access</div></div></div>
+      </section>
+
+      <section class="hero-state status-state" data-state="empty"><div><div class="value-tag">Today’s spots are claimed</div><h2 class="display">Sold out today. <em>New spots open at midnight PT.</em></h2><p class="lede">Follow @startwithjake so you see the next drop.</p></div></section>
+      <section class="hero-state status-state" data-state="offline"><div><div class="value-tag">Live data reconnecting</div><h2 class="display">Neo is still here. <em>The ticker will catch up.</em></h2><p class="lede">The stream continues while we reconnect the latest buyer activity.</p></div></section>
     </section>
-    <section class="hero-state" data-state="bnpl">
-      <div class="bnpl">
-        <div class="bnpl-hero">
-          <span class="bnpl-amount">$0</span>
-          <span class="bnpl-down">DOWN</span>
-        </div>
-        <span class="bnpl-sub">PAY LATER WITH</span>
-        <div class="bnpl-badges">
-          <span class="bnpl-badge bnpl-badge--afterpay">afterpay</span>
-          <span class="bnpl-badge bnpl-badge--klarna">Klarna.</span>
-        </div>
-        <div class="bnpl-code">
-          <span class="bnpl-code-label">USE CODE <b>JAKE</b></span>
-          <span class="bnpl-code-off">GET $25 OFF</span>
-        </div>
-      </div>
-    </section>
-    <section class="hero-state" data-state="features">
-      <div class="features">
-        <div class="feature">
-          <svg class="feature-icon" viewBox="0 0 256 256"><path d="M152,116H140V60h4a28,28,0,0,1,28,28,12,12,0,0,0,24,0,52.06,52.06,0,0,0-52-52h-4V24a12,12,0,0,0-24,0V36h-4a52,52,0,0,0,0,104h4v56H104a28,28,0,0,1-28-28,12,12,0,0,0-24,0,52.06,52.06,0,0,0,52,52h12v12a12,12,0,0,0,24,0V220h12a52,52,0,0,0,0-104Zm-40,0a28,28,0,0,1,0-56h4v56Zm40,80H140V140h12a28,28,0,0,1,0,56Z"/></svg>
-          <span>PAY $0<br>TODAY</span>
-        </div>
-        <div class="feature">
-          <svg class="feature-icon" viewBox="0 0 256 256"><path d="M208,28H188V24a12,12,0,0,0-24,0v4H92V24a12,12,0,0,0-24,0v4H48A20,20,0,0,0,28,48V208a20,20,0,0,0,20,20H208a20,20,0,0,0,20-20V48A20,20,0,0,0,208,28ZM68,52a12,12,0,0,0,24,0h72a12,12,0,0,0,24,0h16V76H52V52ZM52,204V100H204V204Zm120.49-84.49a12,12,0,0,1,0,17l-48,48a12,12,0,0,1-17,0l-24-24a12,12,0,0,1,17-17L116,159l39.51-39.52A12,12,0,0,1,172.49,119.51Z"/></svg>
-          <span>FLEXIBLE<br>PAYMENTS</span>
-        </div>
-        <div class="feature">
-          <svg class="feature-icon" viewBox="0 0 256 256"><path d="M208,36H48A20,20,0,0,0,28,56v56c0,54.29,26.32,87.22,48.4,105.29,23.71,19.39,47.44,26,48.44,26.29a12.1,12.1,0,0,0,6.32,0c1-.28,24.73-6.9,48.44-26.29,22.08-18.07,48.4-51,48.4-105.29V56A20,20,0,0,0,208,36Zm-4,76c0,35.71-13.09,64.69-38.91,86.15A126.28,126.28,0,0,1,128,219.38a126.14,126.14,0,0,1-37.09-21.23C65.09,176.69,52,147.71,52,112V60H204ZM79.51,144.49a12,12,0,1,1,17-17L112,143l47.51-47.52a12,12,0,0,1,17,17l-56,56a12,12,0,0,1-17,0Z"/></svg>
-          <span>NO HIDDEN<br>FEES</span>
-        </div>
-        <div class="feature">
-          <svg class="feature-icon feature-icon--accent" viewBox="0 0 256 256"><path d="M204.73,51.85A108.07,108.07,0,0,0,20,128v56a28,28,0,0,0,28,28H64a28,28,0,0,0,28-28V144a28,28,0,0,0-28-28H44.84A84.05,84.05,0,0,1,128,44h.64a83.7,83.7,0,0,1,82.52,72H192a28,28,0,0,0-28,28v40a28,28,0,0,0,28,28h19.6A20,20,0,0,1,192,228H136a12,12,0,0,0,0,24h56a44.05,44.05,0,0,0,44-44V128A107.34,107.34,0,0,0,204.73,51.85ZM64,140a4,4,0,0,1,4,4v40a4,4,0,0,1-4,4H48a4,4,0,0,1-4-4V140Zm124,44V144a4,4,0,0,1,4-4h20v48H192A4,4,0,0,1,188,184Z"/></svg>
-          <span>24/7<br>SUPPORT</span>
-        </div>
-        <div class="feature">
-          <svg class="feature-icon feature-icon--accent" viewBox="0 0 256 256"><path d="M164.38,181.1a52,52,0,1,0-72.76,0,75.89,75.89,0,0,0-30,28.89,12,12,0,0,0,20.78,12,53,53,0,0,1,91.22,0,12,12,0,1,0,20.78-12A75.89,75.89,0,0,0,164.38,181.1ZM100,144a28,28,0,1,1,28,28A28,28,0,0,1,100,144Zm147.21,9.59a12,12,0,0,1-16.81-2.39c-8.33-11.09-19.85-19.59-29.33-21.64a12,12,0,0,1-1.82-22.91,20,20,0,1,0-24.78-28.3,12,12,0,1,1-21-11.6,44,44,0,1,1,73.28,48.35,92.18,92.18,0,0,1,22.85,21.69A12,12,0,0,1,247.21,153.59Zm-192.28-24c-9.48,2.05-21,10.55-29.33,21.65A12,12,0,0,1,6.41,136.79,92.37,92.37,0,0,1,29.26,115.1a44,44,0,1,1,73.28-48.35,12,12,0,1,1-21,11.6,20,20,0,1,0-24.78,28.3,12,12,0,0,1-1.82,22.91Z"/></svg>
-          <span>OVER 200+ TRUSTED<br>CREATORS &amp; GROWING</span>
-        </div>
-      </div>
-    </section>
-    <section class="hero-state" data-state="burst">
-      <div class="burst">
-        <div class="burst-name" id="burstName">—</div>
-        <div class="burst-sub">JUST JOINED · $249 LIFETIME</div>
-      </div>
-    </section>
-    <section class="hero-state" data-state="empty">
-      <div class="empty-block">
-        <span class="empty-title">SOLD OUT TODAY</span>
-        <span class="empty-sub">New spots drop at midnight PT — follow for the next drop.</span>
-      </div>
-    </section>
-    <section class="hero-state" data-state="offline">
-      <div class="empty-block">
-        <span class="empty-title" style="color:var(--w-75);">$249 LIFETIME</span>
-        <span class="empty-sub">Once · + 1:1 coaching at checkout</span>
-      </div>
-    </section>
-  </div>
 
-  <div class="rail rail-right">
-    <div class="cta">
-      <span class="cta-label">LINK IN BIO →</span>
-      <span class="cta-url">stan.store/startwithjake</span>
-    </div>
-  </div>
+    <aside class="cta" aria-label="Neo offer">
+      <div class="cta-kicker">Your next move</div>
+      <div class="cta-title">Build with Neo.</div>
+      <p class="cta-sub">Personalized coaching plus the full Restackd Academy.</p>
+      <div class="cta-price"><b>$249 once</b><span>Lifetime access</span></div>
+      <div class="cta-link">stan.store/startwithjake</div>
+      <div class="cta-arrow">LINK IN BIO →</div>
+    </aside>
+  </main>
 
-  <span class="conn" id="conn"></span>
-  <canvas class="confetti" id="confetti"></canvas>
-</div>
+  <script>
+  (() => {
+    'use strict';
 
-<script>
-(() => {
-  const $hero = document.getElementById('hero');
-  const heroStates = Array.from($hero.querySelectorAll('.hero-state'));
-  let activeState = null;
+    const API_BASE = 'https://restackd.com';
+    const SPOTS = '/api/overlay/spots';
+    const TICKER = '/api/founding/ticker';
+    const SSE = '/api/overlay/stream';
+    const POLL_MS = 3000;
+    const ROTATION_MS = 5500;
+    const BURST_MS = 4400;
+    const ROTATION_STATES = ['testimonial', 'live', 'bnpl', 'features'];
+    const PHASES = ['Locate', 'Lift', 'Resolve', 'Access'];
 
-  function showState(name) {
-    activeState = name;
-    for (const el of heroStates) {
-      el.classList.toggle('is-active', el.dataset.state === name);
-    }
-  }
+    const banner = document.getElementById('banner');
+    const hero = document.getElementById('hero');
+    const states = Array.from(hero.querySelectorAll('.hero-state'));
+    const phaseLabel = document.getElementById('phaseLabel');
+    const phaseCount = document.getElementById('phaseCount');
+    const riserSteps = Array.from(document.querySelectorAll('.riser-key span'));
+    const spotsNum = document.getElementById('spotsNum');
+    const soldToday = document.getElementById('soldToday');
+    const buyerName = document.getElementById('buyerName');
+    const buyerMeta = document.getElementById('buyerMeta');
+    const connection = document.getElementById('connection');
+    const burstName = document.getElementById('burstName');
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const $spotsNum = document.getElementById('spotsNum');
-  const $soldToday = document.getElementById('soldToday');
-  const $buyerFlash = document.getElementById('buyerFlash');
-  const $buyerName = document.getElementById('buyerName');
-  const $banner = document.getElementById('banner');
-  const $conn = document.getElementById('conn');
+    let activeState = 'testimonial';
+    let rotationIndex = 0;
+    let rotationTimer = 0;
+    let burstTimer = 0;
+    let currentRemaining = 7;
+    let everGotData = false;
+    let latestPosition = 0;
+    let eventSource = null;
 
-  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const API_BASE = 'https://restackd.com';
-  const SPOTS = '/api/overlay/spots';
-  const TICKER = '/api/founding/ticker';
-  const SSE = '/api/overlay/stream';
+    const cleanName = (value) => {
+      const text = String(value || 'A new member').trim().replace(/[^\p{L}\p{N}\s.'-]/gu, '');
+      return text.slice(0, 34) || 'A new member';
+    };
 
-  let currentRemaining = null;
-
-  function renderCount(n) {
-    $spotsNum.textContent = String(Math.max(0, n));
-  }
-
-  function fitBuyerName() {
-    $buyerName.style.fontSize = '';
-    let size = 22;
-    while (size > 15 && $buyerName.scrollWidth > $buyerName.clientWidth) {
-      size -= 0.5;
-      $buyerName.style.fontSize = size + 'px';
-    }
-  }
-
-  const cap = s => !s ? '' : s.split(' ').map(w => w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w).join(' ');
-
-  function renderBuyer(name, animate) {
-    $buyerFlash.classList.remove('enter'); void $buyerFlash.offsetWidth;
-    $buyerName.textContent = cap(name);
-    fitBuyerName();
-    if (animate && !reduceMotion) {
-      $buyerFlash.classList.add('enter');
-    } else {
-      $buyerFlash.style.transition = 'none';
-      $buyerFlash.classList.add('enter');
-      void $buyerFlash.offsetWidth;
-      $buyerFlash.style.transition = '';
-    }
-  }
-
-  function applySpots(spots) {
-    currentRemaining = spots.remaining;
-    renderCount(spots.remaining);
-    $soldToday.textContent = `${spots.soldToday} sold today`;
-    $banner.classList.toggle('is-urgent', spots.remaining > 0 && spots.remaining <= 5);
-    const wasLive = ROTATION_STATES[rotationIndex] === 'live';
-    if (spots.remaining <= 0 && !ROTATION_STATES.includes('empty')) {
-      ROTATION_STATES.splice(ROTATION_STATES.indexOf('live'), 1, 'empty');
-      if (wasLive) showState('empty');
-    } else if (spots.remaining > 0 && ROTATION_STATES.includes('empty')) {
-      ROTATION_STATES.splice(ROTATION_STATES.indexOf('empty'), 1, 'live');
-      if (activeState === 'empty') showState('live');
-    }
-  }
-
-  let everGotData = false;
-  function markConn(s) {
-    if (s === 'ok') everGotData = true;
-    if (s === 'offline') {
-      $conn.textContent = '● offline'; $conn.classList.add('offline');
-      if (!everGotData && !ROTATION_STATES.includes('offline')) {
-        ROTATION_STATES.splice(ROTATION_STATES.indexOf('live'), 1, 'offline');
-        showState('offline');
-        stopRotation();
+    function showState(name) {
+      const next = states.find((state) => state.dataset.state === name);
+      if (!next) return;
+      states.forEach((state) => {
+        const visible = state === next;
+        state.classList.toggle('is-active', visible);
+        state.setAttribute('aria-hidden', String(!visible));
+      });
+      activeState = name;
+      const index = ROTATION_STATES.indexOf(name);
+      if (index >= 0) {
+        rotationIndex = index;
+        phaseLabel.textContent = PHASES[index];
+        phaseCount.textContent = `${String(index + 1).padStart(2, '0')} / 04`;
+        riserSteps.forEach((step, stepIndex) => step.classList.toggle('is-active', stepIndex === Math.min(index, 2)));
       }
-    } else { $conn.textContent = ''; $conn.classList.remove('offline'); }
-  }
-
-  const $mascot = document.getElementById('mascot');
-  const $confetti = document.getElementById('confetti');
-
-  let mascotTimer = 0;
-  function mascotReact() {
-    if (reduceMotion) return;
-    $mascot.classList.remove('react'); void $mascot.offsetWidth; $mascot.classList.add('react');
-    clearTimeout(mascotTimer);
-    mascotTimer = setTimeout(() => $mascot.classList.remove('react'), 320);
-  }
-
-  let cw = 0, ch = 0, cctx = null, raf = 0;
-  const parts = [];
-  function sizeConfetti() {
-    cw = $banner.clientWidth; ch = $banner.clientHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    $confetti.width = cw * dpr; $confetti.height = ch * dpr;
-    $confetti.style.width = cw + 'px'; $confetti.style.height = ch + 'px';
-    cctx = $confetti.getContext('2d'); cctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  }
-  function fireConfetti() {
-    if (reduceMotion) return;
-    if (cw === 0) sizeConfetti();
-    const colors = ['#D6F224', '#DFF584', '#FAFBF7'];
-    const ox = cw * 0.5, oy = ch * 0.3;
-    for (let i = 0; i < 24; i++) {
-      const a = Math.random() * Math.PI * 2, sp = 2.5 + Math.random() * 4;
-      parts.push({
-        x: ox + (Math.random() * 16 - 8), y: oy,
-        vx: Math.cos(a) * sp * 0.6, vy: Math.sin(a) * sp * 0.6 - 2.5,
-        rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.35,
-        size: 3.5 + Math.random() * 3.5,
-        color: colors[(Math.random() * colors.length) | 0], life: 1,
-      });
     }
-    if (!raf) raf = requestAnimationFrame(tick);
-  }
-  function tick() {
-    cctx.clearRect(0, 0, cw, ch);
-    const g = 0.3, d = 0.99;
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const p = parts[i];
-      p.vy += g; p.vx *= d; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.014;
-      if (p.life <= 0 || p.y > ch + 10) { parts.splice(i, 1); continue; }
-      cctx.save(); cctx.translate(p.x, p.y); cctx.rotate(p.rot);
-      cctx.globalAlpha = Math.max(0, Math.min(1, p.life)); cctx.fillStyle = p.color;
-      cctx.fillRect(-p.size / 2, -p.size * 0.2, p.size, p.size * 0.4);
-      cctx.restore();
-    }
-    raf = parts.length > 0 ? requestAnimationFrame(tick) : 0;
-  }
-  window.addEventListener('resize', sizeConfetti, { passive: true });
-  sizeConfetti();
 
-  async function loadSpotsColdStart() {
-    try {
-      const r = await fetch(`${API_BASE}${SPOTS}`, { cache: 'no-store', mode: 'cors' });
-      if (r.ok) { applySpots(await r.json()); markConn('ok'); }
-      else markConn('offline');
-    } catch { markConn('offline'); }
-  }
-
-  async function loadTickerColdStart() {
-    try {
-      const r = await fetch(`${API_BASE}${TICKER}`, { cache: 'no-store', mode: 'cors' });
-      if (r.ok) {
-        const d = await r.json();
-        const top = d.entries && d.entries[0];
-        if (top) { renderBuyer(top.name, false); lastSeenId = `${top.position ?? ''}-${top.name}`; }
-        markConn('ok');
-      } else markConn('offline');
-    } catch { markConn('offline'); }
-  }
-
-  loadSpotsColdStart();
-  loadTickerColdStart();
-
-  const ROTATION_STATES = ['testimonial', 'live', 'bnpl', 'features'];
-  const ROTATION_MS = 5500;
-  let rotationIndex = 0;
-  let rotationTimer = null;
-
-  function advanceRotation() {
-    rotationIndex = (rotationIndex + 1) % ROTATION_STATES.length;
-    showState(ROTATION_STATES[rotationIndex]);
-  }
-
-  function startRotation() {
-    if (rotationTimer) return;
-    rotationTimer = setInterval(advanceRotation, ROTATION_MS);
-  }
-
-  function stopRotation() {
-    clearInterval(rotationTimer);
-    rotationTimer = null;
-  }
-
-  showState(ROTATION_STATES[0]);
-  startRotation();
-
-  const BURST_MS = 4500;
-  let burstTimer = 0;
-
-  function triggerSaleBurst(name, remaining, soldToday) {
-    stopRotation();
-    document.getElementById('burstName').textContent = cap(name);
-    mascotReact();
-    fireConfetti();
-    showState('burst');
-    clearTimeout(burstTimer);
-    burstTimer = setTimeout(() => {
+    function advanceRotation() {
+      rotationIndex = (rotationIndex + 1) % ROTATION_STATES.length;
       showState(ROTATION_STATES[rotationIndex]);
-      startRotation();
-    }, BURST_MS);
-  }
+    }
 
-  let lastSeenId = null;
+    function startRotation() {
+      clearInterval(rotationTimer);
+      rotationTimer = setInterval(advanceRotation, ROTATION_MS);
+    }
 
-  function onNewSale(name, position, remaining, soldToday) {
-    const id = `${position ?? ''}-${name}`;
-    if (id === lastSeenId) return; // dedupe: SSE + ticker poll can both report the same sale
-    lastSeenId = id;
-    renderBuyer(name, true);
-    if (typeof remaining === 'number') applySpots({ remaining, soldToday: soldToday ?? 0 });
-    triggerSaleBurst(name, remaining, soldToday);
-  }
+    function stopRotation() { clearInterval(rotationTimer); }
 
-  async function pollTicker() {
-    try {
-      const r = await fetch(`${API_BASE}${TICKER}`, { cache: 'no-store', mode: 'cors' });
-      if (r.ok) {
-        const d = await r.json();
-        const top = d.entries && d.entries[0];
-        if (top) {
-          const id = `${top.position ?? ''}-${top.name}`;
-          if (lastSeenId !== null && id !== lastSeenId) {
-            onNewSale(top.name, top.position);
-          } else if (lastSeenId === null) {
-            lastSeenId = id;
+    function markConnection(ok) {
+      if (ok) {
+        everGotData = true;
+        connection.classList.remove('offline');
+      } else if (!everGotData) {
+        connection.textContent = 'offline';
+        connection.classList.add('offline');
+      }
+    }
+
+    function applySpots(payload = {}) {
+      if (!Number.isFinite(payload.remaining)) return;
+      currentRemaining = Math.max(0, payload.remaining);
+      spotsNum.textContent = String(currentRemaining);
+      if (Number.isFinite(payload.soldToday)) soldToday.textContent = String(Math.max(0, payload.soldToday));
+      banner.classList.toggle('is-urgent', currentRemaining > 0 && currentRemaining <= 5);
+      if (currentRemaining === 0 && activeState === 'live') showState('empty');
+      markConnection(true);
+    }
+
+    function applyBuyer(entry) {
+      if (!entry) return;
+      const name = cleanName(entry.name);
+      buyerName.textContent = name;
+      buyerMeta.textContent = entry.timeLabel ? `${entry.timeLabel} · Neo + Academy · $249 once` : 'Neo + Restackd Academy · $249 once';
+      if (Number.isFinite(entry.position)) latestPosition = Math.max(latestPosition, entry.position);
+      markConnection(true);
+    }
+
+    async function loadSpots() {
+      try {
+        const response = await fetch(`${API_BASE}${SPOTS}`, { cache: 'no-store', mode: 'cors' });
+        if (!response.ok) throw new Error('spots unavailable');
+        applySpots(await response.json());
+      } catch (_) { markConnection(false); }
+    }
+
+    async function pollTicker() {
+      try {
+        const response = await fetch(`${API_BASE}${TICKER}`, { cache: 'no-store', mode: 'cors' });
+        if (!response.ok) throw new Error('ticker unavailable');
+        const payload = await response.json();
+        const entry = payload.latestEntry || (Array.isArray(payload.entries) ? payload.entries[0] : null);
+        applyBuyer(entry);
+      } catch (_) { markConnection(false); }
+    }
+
+    function triggerSaleBurst(name, remaining, sold) {
+      burstName.textContent = cleanName(name);
+      if (Number.isFinite(remaining)) applySpots({ remaining, soldToday: sold });
+      stopRotation();
+      showState('burst');
+      clearTimeout(burstTimer);
+      burstTimer = setTimeout(() => {
+        showState(currentRemaining === 0 ? 'empty' : ROTATION_STATES[rotationIndex]);
+        startRotation();
+      }, reduceMotion ? 2200 : BURST_MS);
+    }
+
+    function onNewSale(payload = {}) {
+      const position = Number(payload.position || 0);
+      if (position && position <= latestPosition) return;
+      if (position) latestPosition = position;
+      applyBuyer(payload);
+      triggerSaleBurst(payload.name, payload.spotsRemaining, payload.soldToday);
+    }
+
+    function openSSE() {
+      if (!('EventSource' in window)) return;
+      try {
+        eventSource = new EventSource(`${API_BASE}${SSE}`);
+        eventSource.onopen = () => markConnection(true);
+        eventSource.onmessage = (event) => {
+          try { onNewSale(JSON.parse(event.data)); } catch (_) { /* keep the stream open */ }
+        };
+        eventSource.onerror = () => {
+          if (eventSource && eventSource.readyState === EventSource.CLOSED) {
+            eventSource.close();
+            eventSource = null;
+            setTimeout(openSSE, 4000);
           }
-        }
-        markConn('ok');
-      } else markConn('offline');
-    } catch { markConn('offline'); }
-  }
+        };
+      } catch (_) { markConnection(false); }
+    }
 
-  const POLL_MS = 3000;
-  setInterval(pollTicker, POLL_MS);
+    showState('testimonial');
+    startRotation();
+    loadSpots();
+    pollTicker();
+    setInterval(pollTicker, POLL_MS);
+    openSSE();
 
-  let es = null;
-  function openSSE() {
-    try {
-      es = new EventSource(`${API_BASE}${SSE}`);
-      es.addEventListener('message', ev => {
-        try {
-          const p = JSON.parse(ev.data);
-          if (p?.name) onNewSale(p.name, p.position, p.spotsRemaining, p.soldToday);
-        } catch {}
-      });
-      es.addEventListener('error', () => {
-        if (es && es.readyState === EventSource.CLOSED) { es.close(); es = null; setTimeout(openSSE, 4000); }
-      });
-    } catch {}
-  }
-  openSSE();
-
-  window.__testHooks = {
-    showState,
-    stopRotation,
-    startRotation,
-    get activeState() { return activeState; },
-    get rotationIndex() { return rotationIndex; },
-  };
-})();
-</script>
+    window.__testHooks = {
+      showState,
+      triggerSaleBurst,
+      stopRotation,
+      startRotation,
+      get activeState() { return activeState; },
+    };
+  })();
+  </script>
 </body>
 </html>

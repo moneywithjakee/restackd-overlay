@@ -39,7 +39,6 @@ const expected = ['testimonial', 'live', 'bnpl', 'features', 'testimonial'];
 const pass = JSON.stringify(seen) === JSON.stringify(expected);
 console.log('seen:', seen);
 console.log(pass ? 'PASS' : 'FAIL — expected: ' + JSON.stringify(expected));
-process.exit(pass ? 0 : 1);
-
 await ctx.close();
 await browser.close();
+process.exit(pass ? 0 : 1);
